@@ -16,7 +16,7 @@ In trading, **alpha** represents the excess return predicted by a signal beyond 
 
 One of the goals of execution in insitutional trading is **cost minimization**. The aim is to reduce implementation shortfall or slippage relative to benchmarks such as arrival price or VWAP.
 
-In **systematic trading**, a signal has a limited lifespan. Slow or overly cost-conscious execution can destroy the alpha that the signal was meant to capture. In this case, execution must be understood as **signal preservation**, or maximizing how much of the forecasted alpha survives through the trading process into realized P\&L.
+In systematic trading, a signal has a limited lifespan. Slow or overly cost-conscious execution can destroy the alpha that the signal was meant to capture. In this case, execution must be understood as **signal preservation**, or maximizing how much of the forecasted alpha survives through the trading process into realized P\&L.
 
 $$
 \text{Realized Alpha} = \text{Predicted Alpha} - (\text{slippage} + \text{market impact} + \text{signal decay})
@@ -28,7 +28,7 @@ Execution algorithms, routing logic, and urgency decisions are all factors in th
 
 ### This Project in Context
 
-The **Alpha Decay Demo** is a minimal, reproducible sandbox designed to illustrate this principle. It simulates signals, orders, fills, and market data, then:
+The Alpha Decay Demo is a minimal, reproducible sandbox designed to illustrate this principle. It simulates signals, orders, fills, and market data, then:
 
 * Computes **alpha decay labels** at the parent-order level
 * Builds **features** from order characteristics and microstructure
@@ -39,11 +39,11 @@ By walking through this workflow, the demo shows how execution research can evol
 
 ## What is this?
 
-**A lightweight research proof of concept** that demonstrates how alpha-aware execution can be measured, modeled, and explained.
+A lightweight research proof of concept that demonstrates how alpha-aware execution can be measured, modeled, and explained.
 
 * **Problem traders face**: signals decay quickly after order arrival, driving slippage and timing risk.
 * **What this demo does**: simulates orders + fills, computes decay labels, trains models, and produces transparent “explanation cards” that reveal what drove outcomes.
-* **Why it matters**: it frames execution as a **signal preservation problem**.
+* **Why it matters**: it frames execution as a signal preservation problem.
 
 ⚠️ Data is simulated and synthetic
 
@@ -112,7 +112,7 @@ Top permutation importances: spread_bp, imbalance, urgency_tag
 
 <img src="data/roc_curve.png" width="420">
 
-The **classification** task (“high decay” vs “not”) shows **useful discrimination** (AUC \~0.72), even on a small test set. The stepped shape reflects the small sample size, but it suggests features like **spread**, **imbalance**, and **urgency** carry information about decay risk.
+The classification task (“high decay” vs “not”) shows useful discrimination (AUC \~0.72), even on a small test set. The stepped shape reflects the small sample size, but it suggests features like **spread**, **imbalance**, and **urgency** carry information about decay risk.
 
 
 **Explanation card (one line of `data/explanations.jsonl`):**
@@ -130,7 +130,7 @@ Each card summarizes the prediction + drivers for a parent order:
 }
 ```
 
-Each card is a **plain summary** for a parent order: predicted decay (bps), a risk bucket, the top drivers, and suggested tactics/guardrails. Even if the regression is noisy, the cards remain useful for **decision support**.
+Each card is a plain summary for a parent order: predicted decay (bps), a risk bucket, the top drivers, and suggested tactics/guardrails. Even if the regression is noisy, the cards remain useful for decision support.
 
 ---
 
