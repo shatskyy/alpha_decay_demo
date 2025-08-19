@@ -22,17 +22,17 @@ pip install -r requirements.txt
 python -m src.run_demo
 ```
 
-## Optional: LLM contextualization (off by default)
+## LLM contextualization (off by default)
 
 You can optionally attach an expert-style paragraph to each explanation card using OpenAI. This is disabled by default.
 
-1. Install the SDK (optional dependency):
+1. Install the SDK:
 
 ```bash
 pip install openai
 ```
 
-2. Set environment variables (do NOT commit keys):
+2. Set environment variables:
 
 ```bash
 export OPENAI_API_KEY="<your-key>"
