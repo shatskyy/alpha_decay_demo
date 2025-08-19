@@ -29,7 +29,7 @@ Outputs are written to `data/` and `db/`.
 
 ---
 
-## What you’ll see (sample with optional automated LLM summaries)
+## What you’ll see (sample, with optional automated LLM summaries)
 
 **Console:**
 
