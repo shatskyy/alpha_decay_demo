@@ -215,19 +215,6 @@ alpha_decay_demo/
 
 ---
 
-## Known issues & next steps
-
-* **Small test set / high-variance metrics**
-  -  *Next steps:* simulate more days/assets, use time-blocked Cross-Validation, report confidence intervals.
-
-* **Low SNR for the continuous target (near-constant regression predictions)**
-  -  *Next steps:* add feature interactions (e.g., `urgency×spread`, `imbalance×vol`), and log `std(y_pred)` vs `std(y_true)` to detect collapse.
-
-* **Scaling/join pitfalls**
-  - *Next steps:* ensure per-asset, time-sorted `merge_asof` joins; fit scalers on **train only**.
-
----
-
 ## Troubleshooting
 
 * **SQLite ingest errors** → re-run `python -m src.simulate_data` to regenerate CSVs.
