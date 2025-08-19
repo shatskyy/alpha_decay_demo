@@ -41,9 +41,11 @@ Precision/Recall @ tuned threshold: 0.41 / 0.53
 Top permutation importances: spread_bp, imbalance, urgency_tag
 ```
 
-**Plots:** <img src="data/regression_scatter.png" width="420"> <img src="data/roc_curve.png" width="420">
+<img src="data/regression_scatter.png" width="420"> 
 
 The regression model struggles to predict the exact magnitude of alpha decay. Most predictions collapse near zero, while the true values span –50 to +25 bps. This is typical when the signal-to-noise ratio (SNR) is low or when strong regularization pushes coefficients toward zero. It shows why continuous alpha-decay prediction is difficult with a small synthetic dataset.
+
+<img src="data/roc_curve.png" width="420">
 
 The classification task (“high-decay” vs “not”) captures more usable signal. An ROC AUC of ~0.72 indicates the model can discriminate risk better than chance, even on a small test set. The stepped curve reflects the small sample size, but the result suggests features like spread, imbalance, and urgency contain information about decay risk.
 
