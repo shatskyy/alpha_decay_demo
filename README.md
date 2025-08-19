@@ -1,4 +1,8 @@
 # Alpha Decay Demo
+---
+## Improvements in Progress
+
+**Implementing fixes for regression performance issues: improved target variables, temporal feature engineering, ensemble models, and realistic data generation. Analysis identified signal-to-noise ratio and feature-target mismatch as root causes.**
 
 ---
 
