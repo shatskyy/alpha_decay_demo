@@ -43,11 +43,17 @@ Top permutation importances: spread_bp, imbalance, urgency_tag
 
 **Plots:** <img src="data/regression_scatter.png" width="420"> <img src="data/roc_curve.png" width="420">
 
+The regression model struggles to predict the exact magnitude of alpha decay. Most predictions collapse near zero, while the true values span –50 to +25 bps. This is typical when the signal-to-noise ratio (SNR) is low or when strong regularization pushes coefficients toward zero. It shows why continuous alpha-decay prediction is difficult with a small synthetic dataset.
+
+The classification task (“high-decay” vs “not”) captures more usable signal. An ROC AUC of ~0.72 indicates the model can discriminate risk better than chance, even on a small test set. The stepped curve reflects the small sample size, but the result suggests features like spread, imbalance, and urgency contain information about decay risk.
+
 **Explanation card (one line of `data/explanations.jsonl`):**
 
 ```json
 {"parent_id":"ORD123","prediction_bps":-5.7,"risk_bucket":"High decay","top_drivers":["spread_bp","urgency_tag","imbalance"],"suggested_tactics":"Slice smaller, avoid top-of-book","guardrails":"<=10% ADV"}
 ```
+Each card translates a model prediction into summary. It shows the expected decay (bps), a risk bucket, the main drivers, and tactical suggestions (e.g., slicing or participation caps). Even if the regression is weak, these cards are valuable for decision support: they highlight why the model sees risk and how a trader might respond.
+
 ---
 
 ## Run parts of the pipeline
