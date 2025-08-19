@@ -3,12 +3,12 @@
 A small, reproducible project to study **alpha decay** around order execution.  
 It simulates signals, orders, fills, and market data; builds labels and features; trains simple models; and outputs **interpretable explanation cards**.
 
-> ⚠️ **Synthetic data.**
+> ⚠️ **Synthetic data.** >
 ---
 
 ## Why this matters
 
-Most trading signals predictive power **decays** once orders hit the market. Classic execution focuses on **cost minimization** (reduce slippage vs. a benchmark). For short-horizon strategies you must also think about **signal preservation**—capturing as much of the predicted alpha as possible **before it decays**.
+Most trading signals' predictive power **decays** once orders hit the market. Classic execution focuses on **cost minimization** (reduce slippage vs. a benchmark). For short-horizon strategies you must also think about **signal preservation**—capturing as much of the predicted alpha as possible **before it decays**.
 
 This project shows how to **measure** decay, **model** it, and **explain** the drivers so you can reason between the **cost** and **timing** tradeoff.
 
