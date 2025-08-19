@@ -10,7 +10,7 @@ It simulates signals, orders, fills, and market data; builds labels and features
 
 Most trading signals predictive power **decays** once orders hit the market. Classic execution focuses on **cost minimization** (reduce slippage vs. a benchmark). For short-horizon strategies you must also think about **signal preservation**—capturing as much of the predicted alpha as possible **before it decays**.
 
-This project shows how to **measure** decay, **model** it, and **explain** the drivers so you can reason about the trade-off between **cost** and **timing**.
+This project shows how to **measure** decay, **model** it, and **explain** the drivers so you can reason between the **cost** and **timing** tradeoff.
 
 ---
 
@@ -29,7 +29,20 @@ Outputs are written to `data/` and `db/`.
 
 ---
 
-## What you’ll see (sample, with optional automated LLM summaries)
+## Optional: LLM summaries for cards
+
+You can add short LLM-generated blurbs to each card (otherwise the project uses simple rule-based text):
+
+```bash
+pip install openai
+export OPENAI_API_KEY=sk-...
+export OPENAI_MODEL=gpt-4o-mini   # optional
+export LLM_ENABLE=1               # enable LLM summaries
+python -m src.run_demo
+```
+---
+
+## What you’ll see (example)
 
 **Console:**
 
@@ -42,7 +55,7 @@ Top permutation importances: spread_bp, imbalance, urgency_tag
 
 <img src="data/regression_scatter.png" width="420"> 
 
-The model struggles to predict the **exact size** of alpha decay. Most predictions sit near zero, while true values span roughly –50 to +25 bps. This often happens when the **signal-to-noise ratio (SNR)** is low or regularization is strong on a small dataset.
+The model struggles to predict the **exact size** of alpha decay. Most predictions sit near zero, while true values span roughly –50 to +25 bps. This can happen when the **signal-to-noise ratio (SNR)** is low or regularization is strong on a small dataset.
 
 <img src="data/roc_curve.png" width="420">
 
@@ -63,6 +76,15 @@ Each card summarizes the prediction + drivers for a parent order:
 }
 
 Each card is a **plain summary** for a parent order: predicted decay (bps), a risk bucket, the top drivers, and suggested tactics/guardrails. Even if the regression is noisy, the cards remain useful for **decision support**.
+
+---
+
+## Research framing:
+
+* **Cost minimization (classic)**: reduce implementation shortfall / slippage vs. benchmarks (arrival, VWAP).
+* **Signal preservation (alpha-aware)**: for short-lived signals, prioritize **capturing predicted alpha before it decays**, even if that means accepting higher impact.
+
+This project helps quantify and model decay so execution decisions can trade off **cost** vs. **timing** with high intepretability.
 
 ---
 
@@ -143,30 +165,6 @@ alpha_decay_demo/
 * **ROC-AUC**: 1.0 is perfect, 0.5 is random; measures classification discrimination.
 * **Precision/Recall**: how accurate positive flags are, and how many true positives you find.
 * **SNR (signal-to-noise ratio)**: how much useful variation exists vs. noise.
-
----
-
-
-## Research framing: cost vs. preservation
-
-* **Cost minimization (classic)**: reduce implementation shortfall / slippage vs. benchmarks (arrival, VWAP).
-* **Signal preservation (alpha-aware)**: for short-lived signals, prioritize **capturing predicted alpha before it decays**, even if that means accepting higher impact.
-
-This project helps quantify and model decay so execution decisions can trade off **cost** vs. **timing** with eyes open.
-
----
-
-## Optional: LLM summaries for cards
-
-You can add short LLM-generated blurbs to each card (otherwise the project uses simple rule-based text):
-
-```bash
-pip install openai
-export OPENAI_API_KEY=sk-...
-export OPENAI_MODEL=gpt-4o-mini   # optional
-export LLM_ENABLE=1               # enable LLM summaries
-python -m src.run_demo
-```
 
 ---
 
