@@ -30,10 +30,10 @@ Execution algorithms, routing logic, and urgency decisions are all factors in th
 
 The Alpha Decay Demo is a minimal, reproducible sandbox designed to illustrate this principle. It simulates signals, orders, fills, and market data, then:
 
-* Computes **alpha decay labels** at the parent-order level
-* Builds **features** from order characteristics and microstructure
+* Computes alpha decay labels at the parent-order level
+* Builds features from order characteristics and microstructure
 * Trains baseline models to predict decay risk
-* Produces **explanation cards** that translate model outputs into trader-friendly insights and tactics
+* Produces explanation cards that translate model outputs into trader-friendly insights and tactics
 
 By walking through this workflow, the demo shows how execution research can evolve from pure cost minimization toward a **signal preservation framework**—bridging research signals, execution tactics, and realized alpha.
 
