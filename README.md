@@ -53,13 +53,13 @@ Precision/Recall @ tuned threshold: 0.41 / 0.53
 Top permutation importances: spread_bp, imbalance, urgency_tag
 ```
 
-<img src="data/regression_scatter.png" width="420"> 
-
-The model struggles to predict the **exact size** of alpha decay. Most predictions sit near zero, while true values span roughly –50 to +25 bps. This can happen when the **signal-to-noise ratio (SNR)** is low or regularization is strong on a small dataset.
-
 <img src="data/roc_curve.png" width="420">
 
 The **classification** task (“high decay” vs “not”) shows **useful discrimination** (AUC \~0.72), even on a small test set. The stepped shape reflects the small sample size, but it suggests features like **spread**, **imbalance**, and **urgency** carry information about decay risk.
+
+<img src="data/regression_scatter.png" width="420"> 
+
+The current regression model struggles to predict the **exact size** of alpha decay. Most predictions sit near zero, while true values span roughly –50 to +25 bps. This can happen when the **signal-to-noise ratio (SNR)** is low or regularization is strong on a small dataset.
 
 **Explanation card (one line of `data/explanations.jsonl`):**
 
