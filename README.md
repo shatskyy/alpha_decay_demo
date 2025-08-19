@@ -157,16 +157,16 @@ alpha_decay_demo/
 
 ---
 
-## Known issues & fixes (short)
+## Known issues & next steps
 
 * **Small test set / high-variance metrics**
-  *Fix:* simulate more days/assets, use time-blocked Cross-Validation, report confidence intervals.
+  -  *Next steps:* simulate more days/assets, use time-blocked Cross-Validation, report confidence intervals.
 
 * **Low SNR for the continuous target (near-constant regression predictions)**
-  *Fix:* add feature interactions (e.g., `urgency×spread`, `imbalance×vol`), and log `std(y_pred)` vs `std(y_true)` to detect collapse.
+  -  *Next steps:* add feature interactions (e.g., `urgency×spread`, `imbalance×vol`), and log `std(y_pred)` vs `std(y_true)` to detect collapse.
 
 * **Scaling/join pitfalls**
-  *Fix:* ensure per-asset, time-sorted `merge_asof` joins; fit scalers on **train only**.
+  - *Next steps:* ensure per-asset, time-sorted `merge_asof` joins; fit scalers on **train only**.
 
 ---
 
