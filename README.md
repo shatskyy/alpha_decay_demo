@@ -192,10 +192,18 @@ If unset, cards **fall back to rule-based** summaries.
 
 ## Limitations & next steps
 
-* **Synthetic microstructure**: no venue routing/queue modeling; fills are stylized.
-* **Single-horizon labels**: extend to **decay curves** (1/5/15/60m) and compare capture.
-* **No inventory/risk coupling**: add urgency derived from portfolio risk.
-* **Next**: multi-venue features, cost-vs-decay frontier analysis, per-asset stability & drift checks.
+**Known issues observed in sample outputs (and fixes)**  
+
+- **Small test set / high variance metrics:** Stepped ROC and noisy scatter indicate few test points.  
+  *Fix:* simulate more days/assets, use Cross-Validation (grouped by date/asset), and report CIs/bootstraps for AUC/MAE.
+
+- **Low signal-to-noise ratio for continuous bps target:** Continuous `alpha_decay` may be hard to learn with current features. Most variation in the labels is random/noisy relative to the features. Regression tends to collapse toward the mean, and predictions look flat (like in your scatter).
+  *Fix:* add interactions (e.g., `urgency×spread`, `imbalance×rv`), widen `alpha`/`l1_ratio` grid. Log `std(y_pred)` vs `std(y_true)` to catch collapse early.
+
+- **Potential scaling/join pitfalls:** Mis-sorted `merge_asof` or inconsistent scaling can flatten signal.  
+  *Fix:* ensure per-asset time-sorted joins; verify scaler fit on train only.
+
+- **Classification calibration:** AUC looks decent, but probabilities may be uncalibrated on small N.  
 
 ---
 
