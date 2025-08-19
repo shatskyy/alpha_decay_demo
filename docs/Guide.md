@@ -2,41 +2,51 @@
 
 This guide walks you through the demo end-to-end: what it does, how to run it, and what each module produces.
 
-## What this demo does
+---
 
-A minimal, reproducible workflow to study alpha decay around order execution:
+## Why this matters
 
-- Simulate small but realistic datasets (signals, market bars, orders, child fills)
-- Build a local SQLite database
-- Compute labels and features
-- Train models (regression + classification)
-- Score the test set and produce human-readable “explanation cards”
+Signal strength tends to decay quickly once orders hit the market. For execution traders, this decay drives slippage, timing risk, and opportunity cost.
+This demo is a **minimal, reproducible sandbox** for studying alpha decay around order execution. It shows how to:
 
-Everything is reproducible, Python-only, and runs in a few minutes on a laptop.
+* Generate synthetic but realistic data (signals, orders, fills, market bars)
+* Build a database that joins orders, fills, and market context
+* Compute alpha decay labels
+* Engineer microstructure-based features
+* Train baseline models (regression + classification)
+* Produce **intepretable explanations** that highlight what drove outcomes
+
+⚠️All data is simulated.
+
+Everything runs in less than a minute on a laptop with pure Python dependencies.
+
+---
 
 ## Quick start
 
-1. Create a virtual environment and install deps
+1. Create a virtual environment and install dependencies:
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-2. Run the full pipeline
+2. Run the full pipeline:
 
 ```bash
 python -m src.run_demo
 ```
 
-3. Inspect outputs
+3. Inspect outputs:
 
-- SQLite database: `db/alpha.sqlite`
-- Data tables: `data/*.csv`, `data/labels.parquet`, `data/features.parquet`
-- Plots: `data/regression_scatter.png`, `data/roc_curve.png`
-- Explanation cards: `data/explanations.jsonl` (one card per line)
+* Database: `db/alpha.sqlite`
+* Data tables: `data/*.csv`, `data/labels.parquet`, `data/features.parquet`
+* Plots: `data/regression_scatter.png`, `data/roc_curve.png`
+* Explanation cards: `data/explanations.jsonl`
 
-Optional: Open the notebook `notebooks/demo.ipynb` and run all cells.
+Optional: open the notebook `notebooks/demo.ipynb` for interactive exploration.
+
+---
 
 ## Repository structure
 
@@ -44,69 +54,100 @@ Optional: Open the notebook `notebooks/demo.ipynb` and run all cells.
 alpha_decay_demo/
   README.md
   requirements.txt
-  .gitignore
-  data/                # CSVs, parquet outputs, plots
+  src/                 # Core scripts
+    simulate_data.py
+    ingest.py
+    label.py
+    features.py
+    train.py
+    predict_explain.py
+    run_demo.py
+  data/                # Outputs: CSVs, parquet, plots
   db/                  # SQLite database
-  src/
-    simulate_data.py   # Simulate signals, market, orders, child fills → CSVs
-    ingest.py          # Create SQLite, create tables, bulk insert → db/alpha.sqlite
-    label.py           # Compute alpha at signal vs exec, alpha_decay, flags → labels.parquet
-    features.py        # Parent-level features from microstructure + footprint → features.parquet
-    train.py           # Train ElasticNetCV + LogisticRegressionCV; plots & artifacts
-    predict_explain.py # Score test set; produce explanation cards (JSONL)
-    run_demo.py        # Orchestrator — one command runs everything
-    utils.py           # (Reserved) shared helpers
-  notebooks/
-    demo.ipynb         # Optional companion to explore outputs
+  notebooks/           # Optional demo notebook
   docs/
     Guide.md           # This guide
-    Data_Schema.md     # Detailed schema of CSVs and SQLite tables
+    Data_Schema.md     # Detailed schema reference
 ```
 
-## Data flow (high-level)
+---
 
-1. `simulate_data.py` → writes:
-   - `data/signals.csv`, `data/orders.csv`, `data/child_fills.csv`, `data/market.csv`
-2. `ingest.py` → `db/alpha.sqlite` with tables and indexes
-3. `label.py` → `data/labels.parquet`
-4. `features.py` → `data/features.parquet`
-5. `train.py` → trains, prints metrics, saves plots and models
-6. `predict_explain.py` → `data/explanations.jsonl` and prints samples
+## Data flow
 
-## Schemas (summary)
+1. `simulate_data.py` → signals, market bars, parent orders, child fills (`data/*.csv`)
+2. `ingest.py` → bulk insert into `db/alpha.sqlite`
+3. `label.py` → compute alpha decay labels (`data/labels.parquet`)
+4. `features.py` → parent-level features from order footprint + market context (`data/features.parquet`)
+5. `train.py` → fit regression & classification models, save plots and metrics
+6. `predict_explain.py` → generate explanation cards (`data/explanations.jsonl`)
 
-See `docs/Data_Schema.md` for the full column lists and definitions. Key tables:
+---
 
-- `signals(ts_signal, asset, side, signal_score, alpha_horizon_min, signal_strength_rank)`
-- `orders(parent_id, ts_arrival, asset, side, qty, urgency_tag, algo_type, participation_cap, broker, venue_hint)`
-- `child_fills(parent_id, ts, price, qty, venue, order_type)`
-- `market(ts, asset, mid, bid, ask, spread_bp, depth1_bid, depth1_ask, imbalance, rv_5m, rv_30m, adv, turnover)`
+## Key schemas
+
+Full column definitions are in `docs/Data_Schema.md`. Highlights:
+
+* **signals**: signal timestamp, asset, side, score, horizon, rank
+* **orders**: parent ID, arrival time, side, qty, urgency, algo type, caps, broker, venue hints
+* **child\_fills**: parent ID, timestamp, price, qty, venue, order type
+* **market**: mid, bid/ask, spread (bps), depth, imbalance, realized vol, ADV, turnover
+
+---
 
 ## Modeling and evaluation
 
-- Time-aware split: last `ts_signal` date is test; earlier dates are train
-- Regression: ElasticNetCV (scaled) on `alpha_decay` (bps); Ridge fallback if needed
-- Classification: LogisticRegressionCV (balanced); threshold tuning via Max-F1 + base-rate
-- Plots: regression scatter; ROC curve
-- Diagnostics printed to console: MAE, AUC, tuned Precision/Recall, std of regression predictions, top permutation importances
+* **Train/test split**: last signal date = test, earlier = train
+* **Regression**: ElasticNetCV (scaled), predicting alpha decay (bps)
+* **Classification**: LogisticRegressionCV, tuned threshold (Max-F1 + base rate)
+* **Outputs**: regression scatter, ROC curve, MAE/AUC/Precision/Recall printed to console
+* **Diagnostics**: std of regression predictions, top permutation importances
+
+---
 
 ## Explanation cards
 
-Each JSON object includes:
+Each card summarizes prediction + drivers for one parent order.
+Example:
 
-- `parent_id`, `prediction_bps`, risk bucket (quantile-based), `top_drivers` (permutation importance), `suggested_tactics`, `guardrails`
-- One card per line in `data/explanations.jsonl`
+```json
+{
+  "parent_id": "ORD123",
+  "prediction_bps": -5.7,
+  "risk_bucket": "High decay",
+  "top_drivers": ["spread_bp", "urgency_tag", "imbalance"],
+  "suggested_tactics": "Slice smaller, avoid top-of-book",
+  "guardrails": "Do not exceed 10% ADV"
+}
+```
+
+* One card per line in `data/explanations.jsonl`
+* Useful for **interpreting model outputs** and framing trader tactics/constraints
+
+---
+
+## Questions to explore
+
+This framework provides a safe sandbox to explore real execution problems:
+
+* How quickly does signal strength decay once orders arrive?
+* Which microstructure features (spread, imbalance, volatility) drive decay most?
+* How stable are decay patterns across assets or time periods?
+* How could these insights inform pre-trade estimates or TCA extensions?
+
+---
 
 ## Reproducibility
 
-- Fixed seeds where relevant; small dataset (5 assets × 5 days) to run quickly
-- Pure Python dependencies: pandas, numpy, scikit-learn, matplotlib, sqlite-utils, pyarrow, joblib
-- All outputs written under `data/` and `db/`
+* Fixed seeds where relevant
+* Dataset: 5 assets × 5 days → runs in minutes
+* Dependencies: pandas, numpy, scikit-learn, matplotlib, sqlite-utils, pyarrow, joblib
+* All outputs reproducible under `data/` and `db/`
+
+---
 
 ## Troubleshooting
 
-- If SQLite errors on ingest: ensure `data/*.csv` exist by re-running `python -m src.simulate_data`
-- If merge_asof sorting errors: fixed in `features.py` via per-asset sorted as-of joins
-- If classification shows 0/0 precision/recall: tuned thresholds are printed; use the tuned threshold rather than 0.5 to convert probabilities to labels
-- If plots are empty or models look constant: check the printed std of predictions and permutation importances
-
+* **SQLite ingest errors** → re-run `python -m src.simulate_data` to regenerate CSVs
+* **merge\_asof sorting errors** → fixed in `features.py` (per-asset sorted joins)
+* **Classification precision/recall = 0** → use the tuned threshold printed, not 0.5
+* **Empty plots or flat predictions** → check prediction std and permutation importances
