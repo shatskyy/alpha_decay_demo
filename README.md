@@ -3,10 +3,10 @@
 ## Improvements in Progress
 
 Implementing fixes for regression performance issues: 
-- Improved target variables
-- Temporal feature engineering
-- Ensemble models
-- Realistic data generation
+- Adding real-data pipeline with Polygon.io API
+- Mean-reversion signals using real market data, and simulating parent/child fills from those signals 
+- Ensemble models for classification and prediction
+- Enhanced LLM connectivity
 
 ---
 
