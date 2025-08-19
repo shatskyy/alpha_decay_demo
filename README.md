@@ -74,6 +74,7 @@ Each card summarizes the prediction + drivers for a parent order:
   "suggested_tactics": "Slice smaller, avoid top-of-book",
   "guardrails": "<=10% ADV"
 }
+```
 
 Each card is a **plain summary** for a parent order: predicted decay (bps), a risk bucket, the top drivers, and suggested tactics/guardrails. Even if the regression is noisy, the cards remain useful for **decision support**.
 
