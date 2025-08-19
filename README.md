@@ -1,16 +1,16 @@
 # Alpha Decay Demo
 
-*A minimal, reproducible sandbox to study **alpha decay** around order execution — simulate signals/orders/fills, build labels & features, train baseline models, and generate human-readable explanation cards — end-to-end in less than a minute on a laptop.*
+A small, reproducible project to study **alpha decay** around order execution.  
+It simulates signals, orders, fills, and market data; builds labels and features; trains simple models; and outputs **interpretable explanation cards**—all in minutes on a laptop.
 
+> ⚠️ **Synthetic data. This is not a production trading system.**
 ---
 
 ## Why this matters
 
-Most trading signals predictive power **decays** once orders hit the market. Classic execution frames the problem as **cost minimization** (reduce slippage vs. a benchmark). Short-horizon systematic strategies also frame execution as **signal preservation** capturing as much predicted alpha as possible **before it decays**.
+Most trading signals predictive power **decays** once orders hit the market. Classic execution focuses on **cost minimization** (reduce slippage vs. a benchmark). For short-horizon strategies you must also think about **signal preservation**—capturing as much of the predicted alpha as possible **before it decays**.
 
-This demo provides a compact, fully reproducible workflow to **measure decay**, **model it**, and **explain drivers** so traders can reason about trade-offs between **cost** and **timing**.
-
-> **Synthetic data. This is not a production execution system.
+This project shows how to **measure** decay, **model** it, and **explain** the drivers so you can reason about the trade-off between **cost** and **timing**.
 
 ---
 
@@ -25,8 +25,7 @@ pip install -r requirements.txt
 python -m src.run_demo
 ```
 
-**Outputs land** in `data/` and `db/`.
-Optional: open `notebooks/demo.ipynb` to explore interactively.
+Outputs are written to `data/` and `db/`.
 
 ---
 
@@ -43,18 +42,27 @@ Top permutation importances: spread_bp, imbalance, urgency_tag
 
 <img src="data/regression_scatter.png" width="420"> 
 
-The regression model struggles to predict the exact magnitude of alpha decay. Most predictions collapse near zero, while the true values span –50 to +25 bps. This is typical when the signal-to-noise ratio (SNR) is low or when strong regularization pushes coefficients toward zero. It shows why continuous alpha-decay prediction is difficult with a small synthetic dataset.
+The model struggles to predict the **exact size** of alpha decay. Most predictions sit near zero, while true values span roughly –50 to +25 bps. This often happens when the **signal-to-noise ratio (SNR)** is low or regularization is strong on a small dataset.
 
 <img src="data/roc_curve.png" width="420">
 
-The classification task (“high-decay” vs “not”) captures more usable signal. An ROC AUC of ~0.72 indicates the model can discriminate risk better than chance, even on a small test set. The stepped curve reflects the small sample size, but the result suggests features like spread, imbalance, and urgency contain information about decay risk.
+The **classification** task (“high decay” vs “not”) shows **useful discrimination** (AUC \~0.72), even on a small test set. The stepped shape reflects the small sample size, but it suggests features like **spread**, **imbalance**, and **urgency** carry information about decay risk.
 
 **Explanation card (one line of `data/explanations.jsonl`):**
 
+Each card summarizes the prediction + drivers for a parent order:
+
 ```json
-{"parent_id":"ORD123","prediction_bps":-5.7,"risk_bucket":"High decay","top_drivers":["spread_bp","urgency_tag","imbalance"],"suggested_tactics":"Slice smaller, avoid top-of-book","guardrails":"<=10% ADV"}
-```
-Each card translates a model prediction into summary. It shows the expected decay (bps), a risk bucket, the main drivers, and tactical suggestions (e.g., slicing or participation caps). Even if the regression is weak, these cards are valuable for decision support: they highlight why the model sees risk and how a trader might respond.
+{
+  "parent_id": "ORD123",
+  "prediction_bps": -5.7,
+  "risk_bucket": "High decay",
+  "top_drivers": ["spread_bp", "urgency_tag", "imbalance"],
+  "suggested_tactics": "Slice smaller, avoid top-of-book",
+  "guardrails": "<=10% ADV"
+}
+
+Each card is a **plain summary** for a parent order: predicted decay (bps), a risk bucket, the top drivers, and suggested tactics/guardrails. Even if the regression is noisy, the cards remain useful for **decision support**.
 
 ---
 
@@ -116,110 +124,73 @@ alpha_decay_demo/
 
 ---
 
-## Key schemas (high level)
-
-*See `docs/Data_Schema.md` for full definitions.*
-
-* **signals**: `ts_signal, asset, side, signal_score, alpha_horizon_min, signal_strength_rank`
-* **orders**: `parent_id, ts_arrival, asset, side, qty, urgency_tag, algo_type, participation_cap, broker, venue_hint`
-* **child\_fills**: `parent_id, ts, price, qty, venue, order_type`
-* **market**: `ts, asset, mid, bid, ask, spread_bp, depth1_bid, depth1_ask, imbalance, rv_5m, rv_30m, adv, turnover`
-
----
-
 ## Modeling & evaluation
 
-* **Split**: time-aware — last `ts_signal` date is test; earlier dates are train
-* **Regression**: ElasticNetCV (scaled) → predict `alpha_decay` (bps)
-* **Classification**: LogisticRegressionCV (balanced), threshold tuned by Max-F1 (with base-rate sanity)
-* **Artifacts**: regression scatter, ROC curve, console metrics (MAE, AUC, P/R), permutation importances
+* **Split**: time-aware (last signal date = test; earlier dates = train)
+* **Regression**: Elastic Net predicts `alpha_decay` (bps)
+* **Classification**: Logistic Regression with a tuned probability threshold
+* **Outputs**: scatter + ROC plots, console metrics, and feature importance
 
 ---
 
-## Explanation cards
+## Quick glossary
 
-Each card summarizes the prediction + drivers for a parent order:
-
-```json
-{
-  "parent_id": "ORD123",
-  "prediction_bps": -5.7,
-  "risk_bucket": "High decay",
-  "top_drivers": ["spread_bp", "urgency_tag", "imbalance"],
-  "suggested_tactics": "Slice smaller, avoid top-of-book",
-  "guardrails": "<=10% ADV"
-}
-```
-
-Use these to translate model outputs into **tactics** (e.g., slicing, urgency) and **guardrails** (participation caps, venue filters).
+* **Alpha**: expected edge (excess return) from a signal over a short horizon.
+* **Alpha decay**: how fast that edge fades after the signal and as you trade.
+* **bps**: basis points (1 bps = 0.01%).
+* **Label**: the value a model tries to predict (e.g., alpha\_decay).
+* **Feature**: an input variable (e.g., spread, imbalance, urgency).
+* **ROC-AUC**: 1.0 is perfect, 0.5 is random; measures classification discrimination.
+* **Precision/Recall**: how accurate positive flags are, and how many true positives you find.
+* **SNR (signal-to-noise ratio)**: how much useful variation exists vs. noise.
 
 ---
+
 
 ## Research framing: cost vs. preservation
 
 * **Cost minimization (classic)**: reduce implementation shortfall / slippage vs. benchmarks (arrival, VWAP).
-* **Signal preservation (alpha-aware)**: when signals are short-lived, prioritize **capturing predicted alpha before it decays**, even if that means accepting higher impact.
+* **Signal preservation (alpha-aware)**: for short-lived signals, prioritize **capturing predicted alpha before it decays**, even if that means accepting higher impact.
 
-This project shows how to **quantify and model** decay so execution decisions can trade off **cost** vs. **timing** with eyes open.
-
----
-
-## Reproducibility
-
-* Fixed seeds where relevant
-* Small dataset (e.g., 5 assets × 5 days) → fast runs
-* Pure-Python stack: pandas, numpy, scikit-learn, matplotlib, sqlite-utils, pyarrow, joblib
-* Deterministic outputs under `data/` and `db/`
+This project helps quantify and model decay so execution decisions can trade off **cost** vs. **timing** with eyes open.
 
 ---
 
 ## Optional: LLM summaries for cards
 
-If you want short LLM-generated blurbs appended to each card (instead of rule-based text):
+You can add short LLM-generated blurbs to each card (otherwise the project uses simple rule-based text):
 
 ```bash
 pip install openai
 export OPENAI_API_KEY=sk-...
-export OPENAI_MODEL=gpt-4o-mini   # optional override
+export OPENAI_MODEL=gpt-4o-mini   # optional
 export LLM_ENABLE=1               # enable LLM summaries
 python -m src.run_demo
 ```
 
-If unset, cards **fall back to rule-based** summaries.
-
 ---
 
-## Questions to explore
+## Known issues & fixes (short)
 
-* How quickly does signal strength decay post-arrival?
-* Which microstructure features (spread, imbalance, volatility) drive decay most?
-* How stable are decay patterns across assets / dates?
-* How could decay risk be incorporated into **pre-trade** analytics or **TCA**?
+* **Small test set / high-variance metrics**
+  *Fix:* simulate more days/assets, use time-blocked CV, report confidence intervals.
 
----
+* **Low SNR for the continuous target (near-constant regression predictions)**
+  *Fix:* add feature interactions (e.g., `urgency×spread`, `imbalance×vol`), widen regularization grid, and log `std(y_pred)` vs `std(y_true)` to detect collapse.
 
-## Limitations & next steps
+* **Scaling/join pitfalls**
+  *Fix:* ensure per-asset, time-sorted `merge_asof` joins; fit scalers on **train only**.
 
-**Known issues observed in sample outputs (and fixes)**  
-
-- **Small test set / high variance metrics:** Stepped ROC and noisy scatter indicate few test points.  
-  *Fix:* simulate more days/assets, use Cross-Validation (grouped by date/asset), and report CIs/bootstraps for AUC/MAE.
-
-- **Low signal-to-noise ratio for continuous bps target:** Continuous `alpha_decay` may be hard to learn with current features. Most variation in the labels is random/noisy relative to the features. Regression tends to collapse toward the mean, and predictions look flat (like in your scatter).
-  *Fix:* add interactions (e.g., `urgency×spread`, `imbalance×rv`), widen `alpha`/`l1_ratio` grid. Log `std(y_pred)` vs `std(y_true)` to catch collapse early.
-
-- **Potential scaling/join pitfalls:** Mis-sorted `merge_asof` or inconsistent scaling can flatten signal.  
-  *Fix:* ensure per-asset time-sorted joins; verify scaler fit on train only.
-
-- **Classification calibration:** AUC looks decent, but probabilities may be uncalibrated on small N.  
+* **Probability calibration**
+  *Fix:* apply Platt/Isotonic calibration on a validation fold and tune thresholds for your objective.
 
 ---
 
 ## Troubleshooting
 
-* **SQLite ingest errors** → re-run `python -m src.simulate_data` to regenerate CSVs
-* **`merge_asof` sorting errors** → handled per-asset in `features.py`
-* **Classification 0/0 P/R** → use the tuned threshold printed (don’t default to 0.5)
-* **Flat predictions / empty plots** → check prediction std + permutation importances; ensure fresh simulation data
+* **SQLite ingest errors** → re-run `python -m src.simulate_data` to regenerate CSVs.
+* **`merge_asof` sorting** → handled per-asset in `features.py`; ensure input CSVs are fresh.
+* **Classification shows 0/0 Precision/Recall** → use the tuned threshold printed to console (don’t default to 0.5).
+* **Flat predictions / empty plots** → regenerate data and check feature importance + prediction std.
 
 ---
