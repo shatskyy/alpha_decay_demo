@@ -1,7 +1,7 @@
 # Alpha Decay Demo
 
 A small, reproducible project to study **alpha decay** around order execution.  
-It simulates signals, orders, fills, and market data; builds labels and features; trains simple models; and outputs **interpretable explanation cards**—all in minutes on a laptop.
+It simulates signals, orders, fills, and market data; builds labels and features; trains simple models; and outputs **interpretable explanation cards**.
 
 > ⚠️ **Synthetic data. This is not a production trading system.**
 ---
