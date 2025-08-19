@@ -2,7 +2,11 @@
 ---
 ## Improvements in Progress
 
-**Implementing fixes for regression performance issues: improved target variables, temporal feature engineering, ensemble models, and realistic data generation. Analysis identified signal-to-noise ratio and feature-target mismatch as root causes.**
+Implementing fixes for regression performance issues: 
+- Improved target variables
+- Temporal feature engineering
+- Ensemble models
+- Realistic data generation
 
 ---
 
