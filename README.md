@@ -32,7 +32,7 @@ Optional: open `notebooks/demo.ipynb` to explore interactively.
 
 ## What you’ll see (sample)
 
-**Console (typical):**
+**Console:**
 
 ```
 Regression MAE (bps) on test: 14.6
