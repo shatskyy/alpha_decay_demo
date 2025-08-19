@@ -8,13 +8,13 @@ In trading, **alpha** represents the excess return predicted by a signal beyond 
 
 One of the goals of execution in insitutional trading is **cost minimization**. The aim is to reduce implementation shortfall or slippage relative to benchmarks such as arrival price or VWAP.
 
-In **systematic trading**, a signal has a limited lifespan—sometimes measured in minutes or seconds. Slow or overly cost-conscious execution can destroy the very alpha the signal was meant to capture. In systematic trading execution must be understood as **signal preservation**, or maximizing how much of the forecasted alpha survives through the trading process into realized P\&L.
+In **systematic trading**, a signal has a limited lifespan. Slow or overly cost-conscious execution can destroy the alpha that the signal was meant to capture. In this case, execution must be understood as **signal preservation**, or maximizing how much of the forecasted alpha survives through the trading process into realized P\&L.
 
 $$
 \text{Realized Alpha} = \text{Predicted Alpha} - (\text{slippage} + \text{market impact} + \text{signal decay})
 $$
 
-When signals are short-lived and scale matters, the ability to preserve alpha through execution is critical. Execution algorithms, routing logic, and urgency decisions are all factors in the signal preservation problem.
+Execution algorithms, routing logic, and urgency decisions are all factors in the signal preservation problem.
 
 ---
 
