@@ -1,0 +1,80 @@
+[
+  {
+    "parent_id": "4a54abcf74d8cdfdb2f2b2dc8bfbf77070dbf32e",
+    "prediction_bps": 2.2242575367396915,
+    "risk_bucket": "HIGH",
+    "top_drivers": [
+      {
+        "feature": "lit_volume_est",
+        "importance": -0.002644235873545542,
+        "sign": "-"
+      },
+      {
+        "feature": "minute_of_day",
+        "importance": -0.0026007294617030664,
+        "sign": "-"
+      },
+      {
+        "feature": "signal_strength_rank",
+        "importance": 0.002421027621909144,
+        "sign": "+"
+      }
+    ],
+    "suggested_tactics": [
+      "Balanced POV ~10–15%, mix LIT/DARK, throttle marketable flow"
+    ],
+    "guardrails": ["Do not exceed participation_cap"]
+  },
+  {
+    "parent_id": "de3b90a53d0a3f0b09d77646130198fe3bc48e65",
+    "prediction_bps": 1.1555691727146802,
+    "risk_bucket": "MED",
+    "top_drivers": [
+      {
+        "feature": "lit_volume_est",
+        "importance": -0.002644235873545542,
+        "sign": "-"
+      },
+      {
+        "feature": "minute_of_day",
+        "importance": -0.0026007294617030664,
+        "sign": "-"
+      },
+      {
+        "feature": "signal_strength_rank",
+        "importance": 0.002421027621909144,
+        "sign": "+"
+      }
+    ],
+    "suggested_tactics": [
+      "Balanced POV ~10–15%, mix LIT/DARK, throttle marketable flow"
+    ],
+    "guardrails": ["Do not exceed participation_cap"]
+  },
+  {
+    "parent_id": "cd3276db829676208bad57f530b42fcaac3121ae",
+    "prediction_bps": 1.3419013056879312,
+    "risk_bucket": "MED",
+    "top_drivers": [
+      {
+        "feature": "lit_volume_est",
+        "importance": -0.002644235873545542,
+        "sign": "-"
+      },
+      {
+        "feature": "minute_of_day",
+        "importance": -0.0026007294617030664,
+        "sign": "-"
+      },
+      {
+        "feature": "signal_strength_rank",
+        "importance": 0.002421027621909144,
+        "sign": "+"
+      }
+    ],
+    "suggested_tactics": [
+      "Balanced POV ~10–15%, mix LIT/DARK, throttle marketable flow"
+    ],
+    "guardrails": ["Do not exceed participation_cap"]
+  }
+]

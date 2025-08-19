@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import List, Tuple
 
 import json
+import shutil
 
 import joblib
 import numpy as np
@@ -38,6 +39,7 @@ class Paths:
 	data_dir: Path
 	db_dir: Path
 	db_path: Path
+	docs_examples: Path
 
 
 def get_paths() -> Paths:
@@ -46,8 +48,10 @@ def get_paths() -> Paths:
 	data_dir = project_root / "data"
 	db_dir = project_root / "db"
 	db_path = db_dir / "alpha.sqlite"
+	docs_examples = project_root / "docs" / "examples"
 	data_dir.mkdir(parents=True, exist_ok=True)
-	return Paths(project_root=project_root, data_dir=data_dir, db_dir=db_dir, db_path=db_path)
+	docs_examples.mkdir(parents=True, exist_ok=True)
+	return Paths(project_root=project_root, data_dir=data_dir, db_dir=db_dir, db_path=db_path, docs_examples=docs_examples)
 
 
 def _time_test_set(df: pd.DataFrame) -> pd.DataFrame:
@@ -95,6 +99,28 @@ def _print_metrics(paths: Paths) -> Tuple[float, float]:
 	return mae_bps, roc_auc
 
 
+def _copy_examples(paths: Paths) -> None:
+	# Copy plots
+	for name in ["regression_scatter.png", "roc_curve.png"]:
+		src = paths.data_dir / name
+		if src.exists():
+			shutil.copy(src, paths.docs_examples / name)
+	# Create explanations sample
+	expl_path = paths.data_dir / "explanations.jsonl"
+	if expl_path.exists():
+		cards = []
+		with expl_path.open("r") as f:
+			for i, line in enumerate(f):
+				if i >= 3:
+					break
+				try:
+					cards.append(json.loads(line))
+				except json.JSONDecodeError:
+					continue
+		(paths.docs_examples / "explanations_sample.json").write_text(json.dumps(cards, indent=2))
+		print(f"Examples | Saved plots and sample cards to {paths.docs_examples}")
+
+
 def main() -> None:
 	paths = get_paths()
 	print("[1/6] Simulating data → CSVs…")
@@ -119,6 +145,9 @@ def main() -> None:
 	print("[6/6] Predicting + generating explanation cards…")
 	expl_path = predict_explain.generate_explanations()
 	print(f"Explanations | {expl_path}")
+
+	# Copy examples for read-only sharing
+	_copy_examples(paths)
 
 
 if __name__ == "__main__":
