@@ -39,8 +39,7 @@ By walking through this workflow, the demo shows how execution research can evol
 
 ## What is this?
 
-**A lightweight research sandbox** that shows how signals decay once orders hit the market.
-It demonstrates how alpha-aware execution can be measured, modeled, and explained in a fully reproducible way.
+**A lightweight research proof of concept** that demonstrates how alpha-aware execution can be measured, modeled, and explained.
 
 * **Problem traders face**: signals decay quickly after order arrival, driving slippage and timing risk.
 * **What this demo does**: simulates orders + fills, computes decay labels, trains models, and produces transparent “explanation cards” that reveal what drove outcomes.
