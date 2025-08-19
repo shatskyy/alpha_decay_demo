@@ -77,15 +77,6 @@ Each card is a **plain summary** for a parent order: predicted decay (bps), a ri
 
 ---
 
-## Research framing:
-
-* **Cost minimization (classic)**: reduce implementation shortfall / slippage vs. benchmarks (arrival, VWAP).
-* **Signal preservation (alpha-aware)**: for short-lived signals, prioritize **capturing predicted alpha before it decays**, even if that means accepting higher impact.
-
-This project helps quantify and model decay so execution decisions can trade off **cost** vs. **timing** with high intepretability.
-
----
-
 ## Run parts of the pipeline
 
 ```bash
