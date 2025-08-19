@@ -3,7 +3,7 @@
 - Loads trained artifacts and `data/features.parquet`
 - Filters to test set (last `ts_signal` date)
 - Scores regression and classification models
-- Builds per-parent "Explanation Card" dicts with risk buckets, top drivers, suggested tactics, guardrails
+- Builds per-parent "Explanation Card" dicts with risk buckets, top drivers, suggested tactics, guardrails, and optional LLM summary
 - Saves JSONL to `data/explanations.jsonl` and prints 5 sample cards
 
 CLI:
@@ -22,6 +22,8 @@ import joblib
 import numpy as np
 import pandas as pd
 from sklearn.inspection import permutation_importance
+
+from . import llm_ctx
 
 
 # ---------------------------- Paths -----------------------------------------
@@ -150,6 +152,18 @@ def generate_explanations() -> Path:
 	# 95th percentile of rv_30m on test for guardrail
 	rv95 = float(np.nanpercentile(df_test.get("rv_30m", pd.Series(dtype=float)), 95)) if "rv_30m" in df_test.columns and len(df_test) else float("inf")
 
+	# Gather top-level metrics for LLM context
+	metrics = {}
+	metrics_path = paths.data_dir / "regression_scatter.png"  # dummy trigger that train ran
+	try:
+		# Pull from train artifacts if needed later; here we pass placeholders
+		from sklearn.metrics import roc_auc_score  # noqa: F401
+		df_all_test = df_test
+		# We can't recompute MAE/AUC cheaply here without reloading models; omit
+		metrics = {"reg_mae_bps": np.nan, "clf_roc_auc": np.nan}
+	except Exception:
+		metrics = {"reg_mae_bps": np.nan, "clf_roc_auc": np.nan}
+
 	# Build cards
 	cards: List[Dict] = []
 	for idx, row in df_test.iterrows():
@@ -186,6 +200,15 @@ def generate_explanations() -> Path:
 			"suggested_tactics": suggestions,
 			"guardrails": guards,
 		}
+
+		# Optional LLM summary
+		try:
+			llm_text = llm_ctx.maybe_llm_summarize_card(card, metrics, {"asset": row.get("asset"), "ts_signal": row.get("ts_signal")})
+			if llm_text:
+				card["llm_summary"] = llm_text
+		except Exception:
+			pass
+
 		cards.append(card)
 
 	# Save JSONL

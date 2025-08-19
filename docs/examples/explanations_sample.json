@@ -21,9 +21,11 @@
       }
     ],
     "suggested_tactics": [
-      "Balanced POV ~10–15%, mix LIT/DARK, throttle marketable flow"
+      "Balanced POV ~10\u201315%, mix LIT/DARK, throttle marketable flow"
     ],
-    "guardrails": ["Do not exceed participation_cap"]
+    "guardrails": [
+      "Do not exceed participation_cap"
+    ]
   },
   {
     "parent_id": "de3b90a53d0a3f0b09d77646130198fe3bc48e65",
@@ -47,9 +49,11 @@
       }
     ],
     "suggested_tactics": [
-      "Balanced POV ~10–15%, mix LIT/DARK, throttle marketable flow"
+      "Balanced POV ~10\u201315%, mix LIT/DARK, throttle marketable flow"
     ],
-    "guardrails": ["Do not exceed participation_cap"]
+    "guardrails": [
+      "Do not exceed participation_cap"
+    ]
   },
   {
     "parent_id": "cd3276db829676208bad57f530b42fcaac3121ae",
@@ -73,8 +77,10 @@
       }
     ],
     "suggested_tactics": [
-      "Balanced POV ~10–15%, mix LIT/DARK, throttle marketable flow"
+      "Balanced POV ~10\u201315%, mix LIT/DARK, throttle marketable flow"
     ],
-    "guardrails": ["Do not exceed participation_cap"]
+    "guardrails": [
+      "Do not exceed participation_cap"
+    ]
   }
 ]
