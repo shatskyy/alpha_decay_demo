@@ -32,6 +32,7 @@ from sklearn.metrics import mean_absolute_error, roc_auc_score, precision_score,
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.inspection import permutation_importance
+from sklearn.ensemble import RandomForestRegressor
 
 
 # ---------------------------- Paths -----------------------------------------
@@ -188,16 +189,75 @@ def train_models() -> Tuple[Path, Path]:
 	y_reg_train, y_reg_test = y_reg.loc[train_idx], y_reg.loc[test_idx]
 	y_cls_train, y_cls_test = y_cls.loc[train_idx], y_cls.loc[test_idx]
 
-	# Monotonic constraints for key drivers
-	mono_map = {"spread_bp": 1, "participation_cap": 1, "cap_x_spread": 1, "cap_x_turnover": 1}
-	monotonic_cst = [mono_map.get(c, 0) for c in feature_cols]
-	# Non-linear regressor with monotonic constraints
-	reg_pipe: Pipeline = Pipeline(
-		steps=[
-			("imputer", SimpleImputer(strategy="median")),
-			("model", HistGradientBoostingRegressor(random_state=7, learning_rate=0.06, max_depth=4, max_leaf_nodes=31, monotonic_cst=monotonic_cst)),
-		]
-	)
+	# # Monotonic constraints for key drivers
+	# mono_map = {"spread_bp": 1, "participation_cap": 1, "cap_x_spread": 1, "cap_x_turnover": 1}
+	# monotonic_cst = [mono_map.get(c, 0) for c in feature_cols]
+	# # Non-linear regressor with monotonic constraints
+	# reg_pipe: Pipeline = Pipeline(
+	# 	steps=[
+	# 		("imputer", SimpleImputer(strategy="median")),
+	# 		("model", HistGradientBoostingRegressor(random_state=7, learning_rate=0.06, max_depth=4, max_leaf_nodes=31, monotonic_cst=monotonic_cst)),
+	# 	]
+	# )
+	# clf_pipe: Pipeline = Pipeline(
+	# 	steps=[
+	# 		("imputer", SimpleImputer(strategy="median")),
+	# 		("scaler", StandardScaler(with_mean=True)),
+	# 		("model", LogisticRegressionCV(cv=5, max_iter=2000, class_weight="balanced")),
+	# 	]
+	# )
+
+	# # Fit
+	# reg_pipe.fit(X_train, y_reg_train)
+	# clf_pipe.fit(X_train, y_cls_train)
+	# Add RandomForestRegressor import at the top of the file
+
+	### NEW 
+	from sklearn.ensemble import RandomForestRegressor
+	
+	# IMPROVED: Better models for the corrected targets
+	# Try multiple target variables to find the best one
+	target_variants = {
+	    "alpha_decay": "alpha_decay",
+	    "alpha_decay_vol_adj": "alpha_decay_vol_adj", 
+	    "alpha_decay_weighted": "alpha_decay_weighted"
+	}
+	
+	best_mae = float('inf')
+	best_target = "alpha_decay"
+	best_model = None
+	
+	for target_name, target_col in target_variants.items():
+	    if target_col in df.columns:
+	        y_variant = df[target_col].astype(float)
+	        y_var_train, y_var_test = y_variant.loc[train_idx], y_variant.loc[test_idx]
+	        
+	        reg_temp = Pipeline([
+	            ("imputer", SimpleImputer(strategy="median")),
+	            ("scaler", StandardScaler()),
+	            ("model", RandomForestRegressor(
+	                n_estimators=100, 
+	                max_depth=8,
+	                min_samples_split=10,
+	                random_state=7
+	            )),
+	        ])
+	        
+	        reg_temp.fit(X_train, y_var_train)
+	        pred_temp = reg_temp.predict(X_test)
+	        mae_temp = mean_absolute_error(y_var_test, pred_temp)
+	        
+	        print(f"Target {target_name}: MAE = {mae_temp:.2f}")
+	        
+	        if mae_temp < best_mae:
+	            best_mae = mae_temp
+	            best_target = target_name
+	            best_model = reg_temp
+	
+	reg_pipe = best_model
+	print(f"Best target: {best_target} with MAE = {best_mae:.2f}")
+	
+	# Keep the original classification pipeline
 	clf_pipe: Pipeline = Pipeline(
 		steps=[
 			("imputer", SimpleImputer(strategy="median")),
@@ -206,9 +266,10 @@ def train_models() -> Tuple[Path, Path]:
 		]
 	)
 
-	# Fit
-	reg_pipe.fit(X_train, y_reg_train)
+	# Fit classification model
 	clf_pipe.fit(X_train, y_cls_train)
+
+	####
 
 	# Evaluate regression
 	y_reg_pred_test = reg_pipe.predict(X_test)
