@@ -35,14 +35,15 @@ $$
 - **Multi-Horizon Analysis**: Captures decay patterns across different prediction horizons (1min, 5min, 15min, 1hr)
 
 ### 2. Advanced Feature Engineering
-- **Signal-Microstructure Interactions**: Features like `signal_score × spread` and `signal_strength × urgency`
-- **Temporal Dependencies**: Rolling statistics and regime detection to capture changing market conditions
-- **Volatility Normalization**: Risk-adjusted metrics that improve signal-to-noise ratios
+- **Signal Integration**: Includes signal score and strength as modeling features
+- **Microstructure Context**: Spread, imbalance, depth, and volatility measures
+- **Regime Detection**: Basic volatility and time-of-day regime indicatorsios
 
-### 3. Ensemble Modeling Framework
-- **Multi-Target Optimization**: Tests multiple formulations of alpha decay (raw, volatility-adjusted, signal-weighted)
-- **Model Selection**: Automatically selects best-performing target and model combination
-- **Uncertainty Quantification**: Prediction intervals and confidence scoring for risk management
+
+### 3. Enhanced Modeling Framework
+- **Direction-Aware Targets**: Properly accounts for signal directionality in alpha decay calculation
+- **Monotonic Constraints**: Gradient boosting with constraints on key economic relationships
+- **Multiple Target Variants**: Raw, volatility-adjusted, and signal-weighted decay measures
 
 ### 4. Institutional Decision Support
 - **Risk Bucketing**: Quantile-based classification of decay risk scenarios
@@ -54,7 +55,7 @@ $$
 ## Data Architecture & Methodology
 
 ### Synthetic Data with Realistic Properties
-- **Signal Embedding**: Controlled signal-to-return correlation (~0.25) with realistic decay patterns
+- **Signal Embedding**: Controlled signal-to-return correlation with realistic decay patterns
 - **Microstructure Simulation**: Bid-ask bounce, intraday seasonality, volume patterns
 - **Execution Modeling**: Order flow with realistic market impact and temporary/permanent price effects
 
@@ -181,11 +182,6 @@ python -m src.predict_explain # Generate explanation cards
 - **Orders**: 1:1 with signals
 - **Child Fills**: ~10,000 execution records
 - **Market Data**: ~9,750 minute bars
-
-### Performance Benchmarks
-- **End-to-End Runtime**: <30 seconds on standard hardware
-- **Memory Usage**: <500MB for demo dataset
-- **Model Training**: <10 seconds per model variant
 
 ---
 
