@@ -103,6 +103,35 @@ All AI features are opt-in and degrade gracefully to rule-based text when disabl
 
 ---
 
+## Implementation & Deployment
+
+### Quick Start
+```bash
+# Setup environment
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+
+# Run complete pipeline
+python3 -m src.run_demo
+
+# Enhanced mode with LLM explanations
+export OPENAI_API_KEY=sk-...
+export LLM_ENABLE=1
+python3 -m src.run_demo
+```
+
+### Modular Execution
+```bash
+# Individual pipeline components
+python -m src.simulate_data    # Generate synthetic data
+python -m src.ingest          # Build database
+python -m src.label           # Compute alpha decay metrics
+python -m src.features        # Engineer features
+python -m src.train           # Train ensemble models
+python -m src.predict_explain # Generate explanation cards
+```
+---
+
 ## Key Outputs & Deliverables
 
 ### 1. Explanation Cards (JSON)
@@ -137,36 +166,6 @@ All AI features are opt-in and degrade gracefully to rule-based text when disabl
 - **Prediction Scatter Plots**: Model accuracy visualization
 - **ROC Curves**: Classification performance assessment
 - **Feature Importance**: Driver identification and ranking
-
----
-
-## Implementation & Deployment
-
-### Quick Start
-```bash
-# Setup environment
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-
-# Run complete pipeline
-python3 -m src.run_demo
-
-# Enhanced mode with LLM explanations
-export OPENAI_API_KEY=sk-...
-export LLM_ENABLE=1
-python3 -m src.run_demo
-```
-
-### Modular Execution
-```bash
-# Individual pipeline components
-python -m src.simulate_data    # Generate synthetic data
-python -m src.ingest          # Build database
-python -m src.label           # Compute alpha decay metrics
-python -m src.features        # Engineer features
-python -m src.train           # Train ensemble models
-python -m src.predict_explain # Generate explanation cards
-```
 
 ---
 
