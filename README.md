@@ -36,15 +36,15 @@ This demo operationalizes that idea end-to-end.
   alpha_decay = signal_alpha - execution_alpha
 
 $$
-\text{signal_alpha} = \text{direction} * (\text{future_price} - \text{signal_price})
+\text{signal alpha} = \text{direction} * (\text{future price} - \text{signal price})
 $$
 Theoretical Alpha if the signal could be acted on instant instantaneously
 $$
-\text{execution_alpha} = \text{direction} * (\text{verage_fill_price} - \text{signal_price})
+\text{execution alpha} = \text{direction} * (\text{verage fill_price} - \text{signal price})
 $$
 Realized Alpha after accounting for execution delays and market impact 
 **$$
-\text{alpha_decay_bps} = (\text{signal_alpha} - \text{execution_alpha}) * 10000
+\text{alpha decay_bps} = (\text{signal alpha} - \text{execution alpha}) * 10000
 $$**
 
 
