@@ -158,11 +158,31 @@ def build_labels() -> Path:
 	inputs["r_exec"] = 10000.0 * (inputs["mid_at_target"] - inputs["vwap_exec"]) / inputs["mid_at_signal"]
 	inputs["alpha_decay"] = inputs["r_sig"] - inputs["r_exec"]
 
-	# Signed measures and capture ratio
+	# # Signed measures and capture ratio
+	# side_sign = inputs["side"].map({"BUY": 1.0, "SELL": -1.0}).fillna(0.0)
+	# inputs["alpha_preserved_bps"] = side_sign * inputs["r_exec"]
+	# signed_rsig = side_sign * inputs["r_sig"]
+	# inputs["capture_ratio"] = np.where(np.abs(signed_rsig) > 1e-6, inputs["alpha_preserved_bps"] / signed_rsig, np.nan)
+
+	#### NEW
+	# Fixed  --> Direction-aware calculation from the start
 	side_sign = inputs["side"].map({"BUY": 1.0, "SELL": -1.0}).fillna(0.0)
-	inputs["alpha_preserved_bps"] = side_sign * inputs["r_exec"]
-	signed_rsig = side_sign * inputs["r_sig"]
-	inputs["capture_ratio"] = np.where(np.abs(signed_rsig) > 1e-6, inputs["alpha_preserved_bps"] / signed_rsig, np.nan)
+
+	# Raw returns (direction-neutral, for diagnostics)
+	inputs["r_sig_raw"] = 10000.0 * (inputs["mid_at_target"] - inputs["mid_at_signal"]) / inputs["mid_at_signal"]
+	inputs["r_exec_raw"] = 10000.0 * (inputs["mid_at_target"] - inputs["vwap_exec"]) / inputs["mid_at_signal"]
+
+	# Direction-aware returns
+	inputs["r_sig"] = side_sign * inputs["r_sig_raw"]
+	inputs["r_exec"] = side_sign * inputs["r_exec_raw"]
+
+	# Direction-aware alpha decay
+	inputs["alpha_decay"] = inputs["r_sig"] - inputs["r_exec"]
+
+	# Alternative slippage-only measure (for comparison)
+	inputs["execution_slippage"] = side_sign * 10000.0 * (inputs["vwap_exec"] - inputs["mid_at_signal"]) / inputs["mid_at_signal"]
+
+	###
 
 	# Spread/fee and impact decomposition placeholders (diagnostic, not exact accounting)
 	inputs["spread_fee_bps"] = inputs.get("spread_bp_at_signal", pd.Series(0.0, index=inputs.index)).astype(float)
