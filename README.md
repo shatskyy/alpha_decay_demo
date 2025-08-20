@@ -7,19 +7,19 @@ Institutional execution framed as signal preservation. This sandbox simulates si
 ## Executive summary
 
 - **What it is**: A fast, reproducible demo that models and explains parent-order alpha decay from arrival-time microstructure and order parameters.
-- **What it does today**:
+- **Current Functionality**:
   - Simulates signals, orders, child fills, and minute bars (synthetic but realistic).
   - Computes parent-level alpha-decay labels and builds arrival-only features.
   - Trains regression and classification baselines; saves plots and metrics.
-  - Emits concise per-parent “explanation cards” with predicted decay, drivers, and suggested tactics.
-- **Who it’s for**: Execution researchers, quants, and traders who want to move beyond pure cost minimization toward preserving predicted alpha.
-- **Why it matters**: Execution decisions (urgency, participation, venue mix) can either protect or destroy alpha. Measuring, predicting, and explaining decay is the foundation for adaptive, alpha-aware execution.
+  - Outputs concise per-parent “explanation cards” with predicted decay, drivers, and suggested tactics.
+
+This project aims to provide a framework for executoion traders who want to move beyond pure cost minimization toward preserving predicted alpha. Execution decisions (urgency, participation, venue mix) can either protect or destroy alpha. Measuring, predicting, and explaining decay is the foundation for adaptive, alpha-aware execution.
 
 ---
 
 ## Introduction: Alpha decay and signal preservation
 
-In systematic trading, a signal’s predictive edge decays quickly. Execution must be understood as preserving that edge, not only minimizing cost.
+In systematic trading, a signal’s predictive edge decays quickly. Execution must be understood as preserving that edge, along with minimzing the cost.
 
 \[
 \text{Realized Alpha} = \text{Predicted Alpha} - (\text{slippage} + \text{market impact} + \text{signal decay})
@@ -29,10 +29,25 @@ This demo operationalizes that idea end-to-end.
 
 ---
 
-## What this project does (today)
+## What this project does
 
 - **End-to-end workflow**: signal → parent order → child fills → market context → labels → features → models → explanations
 - **Labels**: parent-level `alpha_decay` in bps and a `decay_flag` based on adaptive thresholds
+  alpha_decay = signal_alpha - execution_alpha
+  
+\[
+\text{signal_alpha} = \text{direction} * (\text{future_price} - \text{signal_price})
+\]
+- Theoretical Alpha if the signal could be acted on instant instantaneously
+\[
+\text{execution_alpha} = \text{direction} * (\text{verage_fill_price} - \text{signal_price})
+\]
+- Realized Alpha after accounting for execution delays and market impact 
+**\[
+\text{alpha_decay_bps} = (\text{signal_alpha} - \text{execution_alpha}) * 10000
+\]**
+
+
 - **Features**: arrival microstructure (spread, imbalance, RV), time-of-day, signal context, planned policy knobs (e.g., participation cap), regime flags
 - **Models**: monotone-constrained regression (HGBR) and logistic classification with tuned thresholds
 - **Outputs**: scatter/ROC plots, `data/explanations.jsonl` with risk buckets, drivers, suggested tactics, and simple guardrails
