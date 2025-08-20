@@ -1,44 +1,56 @@
 # Alpha Decay Demo
 
----
-
-## Improvements in Progress
-
-Implementing fixes for regression performance issues:
-
-- Improving mock data
-- Mean-reversion signals, and simulating parent/child fills from those signals
-- Ensemble models for classification and prediction
-- Enhanced LLM connectivity
+Institutional execution framed as signal preservation. This sandbox simulates signals, parent/child execution, and market microstructure to measure alpha decay, predict it with lightweight ML, and explain drivers in trader-ready language.
 
 ---
 
-## Introduction: Alpha Decay and Signal Preservation in Execution
+## Executive summary
 
-In trading, **alpha** represents the excess return predicted by a signal beyond a benchmark. The challenge is that most signals are **perishable**, meaning that their predictive power diminishes after generation, otherwise known as **alpha decay**.
+- **What it is**: A fast, reproducible demo that models and explains parent-order alpha decay from arrival-time microstructure and order parameters.
+- **What it does today**:
+  - Simulates signals, orders, child fills, and minute bars (synthetic but realistic).
+  - Computes parent-level alpha-decay labels and builds arrival-only features.
+  - Trains regression and classification baselines; saves plots and metrics.
+  - Emits concise per-parent “explanation cards” with predicted decay, drivers, and suggested tactics.
+- **Who it’s for**: Execution researchers, quants, and traders who want to move beyond pure cost minimization toward preserving predicted alpha.
+- **Why it matters**: Execution decisions (urgency, participation, venue mix) can either protect or destroy alpha. Measuring, predicting, and explaining decay is the foundation for adaptive, alpha-aware execution.
 
-One of the goals of execution in insitutional trading is **cost minimization**. The aim is to reduce implementation shortfall or slippage relative to benchmarks such as arrival price or VWAP.
+---
 
-In systematic trading, a signal has a limited lifespan. Slow or overly cost-conscious execution can destroy the alpha that the signal was meant to capture. In this case, execution must be understood as **signal preservation**, or maximizing how much of the forecasted alpha survives through the trading process into realized P\&L.
+## Introduction: Alpha decay and signal preservation
 
-$$
+In systematic trading, a signal’s predictive edge decays quickly. Execution must be understood as preserving that edge, not only minimizing cost.
+
+\[
 \text{Realized Alpha} = \text{Predicted Alpha} - (\text{slippage} + \text{market impact} + \text{signal decay})
-$$
+\]
 
-Execution algorithms, routing logic, and urgency decisions are all factors in the signal preservation problem.
+This demo operationalizes that idea end-to-end.
 
 ---
 
-### This Project in Context
+## What this project does (today)
 
-The Alpha Decay Demo is a minimal, reproducible sandbox designed to illustrate this principle. It simulates signals, orders, fills, and market data, then:
+- **End-to-end workflow**: signal → parent order → child fills → market context → labels → features → models → explanations
+- **Labels**: parent-level `alpha_decay` in bps and a `decay_flag` based on adaptive thresholds
+- **Features**: arrival microstructure (spread, imbalance, RV), time-of-day, signal context, planned policy knobs (e.g., participation cap), regime flags
+- **Models**: monotone-constrained regression (HGBR) and logistic classification with tuned thresholds
+- **Outputs**: scatter/ROC plots, `data/explanations.jsonl` with risk buckets, drivers, suggested tactics, and simple guardrails
 
-- Computes alpha decay labels at the parent-order level
-- Builds features from order characteristics and microstructure
-- Trains baseline models to predict decay risk
-- Produces explanation cards that translate model outputs into trader-friendly insights and tactics
+Data are synthetic and sized to run in seconds; all artifacts are written to `data/` and `db/`.
 
-By walking through this workflow, the demo shows how execution research can evolve from pure cost minimization toward a **signal preservation framework**—bridging research signals, execution tactics, and realized alpha.
+---
+
+## Roadmap: AI interpretation and market context (goals)
+
+Integrate AI to interpret every significant output and contextualize risk with current market conditions:
+
+- **Per-parent narratives**: LLM augments cards with concise, trader-friendly explanations citing metrics and uncertainty.
+- **Per-asset and day summaries**: roll-up of drivers, regime performance, and what-if scenarios.
+- **Market context**: optional feeds (index returns, vol, economic/earnings calendars) to flag relevant shifts that inform execution urgency.
+- **Shareable report**: generate a daily HTML/Markdown brief combining diagnostics, context, and cards.
+
+All AI features are opt-in and degrade gracefully to rule-based text when disabled.
 
 ## What is this?
 
@@ -66,7 +78,7 @@ A lightweight research proof of concept that demonstrates how alpha-aware execut
 - **End-to-end workflow**:
   signal → parent order → child fills → market context → labels → features → models → explanations
 - **Database**: all orders, fills, and market bars joined in one SQLite file
-- **Models**: regression (work in progress) & classification predicting signal decay in bps
+- **Models**: monotone-constrained regression predicting `alpha_decay` (bps) and a logistic classifier flagging high-decay risk
 - **Visuals**: regression scatter, ROC curve
 - **Explanation Cards**: concise summaries of predicted risk and drivers
 
@@ -112,7 +124,6 @@ Classification ROC-AUC on test: 0.74
 Precision/Recall @ tuned threshold: 0.41 / 0.53
 Top permutation importances: spread_bp, imbalance, urgency_tag
 ```
-<img src="data/regression_scatter.png" width="420">
 
 <img src="data/roc_curve.png" width="420">
 
@@ -126,10 +137,20 @@ Each card summarizes the prediction + drivers for a parent order:
 {
   "parent_id": "ORD123",
   "prediction_bps": -5.7,
-  "risk_bucket": "High decay",
-  "top_drivers": ["spread_bp", "urgency_tag", "imbalance"],
-  "suggested_tactics": "Slice smaller, avoid top-of-book",
-  "guardrails": "<=10% ADV"
+  "interval_bps": { "q10": -9.2, "q50": -5.6, "q90": -2.1 },
+  "risk_bucket": "HIGH",
+  "top_drivers": [
+    { "feature": "spread_bp", "importance": 0.0123, "sign": "+" },
+    { "feature": "urgency_HIGH", "importance": 0.0098, "sign": "+" },
+    { "feature": "imbalance", "importance": 0.0061, "sign": "-" }
+  ],
+  "suggested_tactics": [
+    "Increase POV to ~18–25%, bias DARK ~60%, allow marketable in small clips"
+  ],
+  "guardrails": [
+    "Do not exceed participation_cap (20%)",
+    "High uncertainty: prefer robust tactics; avoid overfitting to point estimate"
+  ]
 }
 ```
 
@@ -167,19 +188,18 @@ alpha_decay_demo/
   requirements.txt
   src/
     simulate_data.py     # signals, market bars, parent orders, child fills → CSVs
-    ingest.py            # create SQLite, tables, bulk insert → db/alpha.sqlite
-    label.py             # compute alpha at signal vs. exec; alpha_decay labels → parquet
-    features.py          # parent-level features from microstructure & order footprint
-    train.py             # ElasticNetCV & LogisticRegressionCV; plots & metrics
-    predict_explain.py   # score + generate explanation cards (JSONL)
-    run_demo.py          # orchestrator: one command runs everything
+    ingest.py            # build SQLite and load CSVs → db/alpha.sqlite
+    label.py             # compute alpha_decay/flags → parquet
+    features.py          # arrival-time features and regime flags
+    train.py             # train/evaluate; save models/plots/metrics
+    predict_explain.py   # score test, generate explanation cards (JSONL)
+    what_if.py           # predictive and structural scenario analysis
+    run_demo.py          # orchestrator: run the full pipeline
   data/                  # CSVs, parquet outputs, plots, explanations.jsonl
   db/                    # SQLite database
-  notebooks/
-    demo.ipynb           # optional interactive exploration
   docs/
-    Guide.md             # detailed guide
-    Data_Schema.md       # full column definitions for CSVs & SQLite tables
+    Data_Schema.md       # column definitions for CSVs & SQLite tables
+    examples/            # example plots and sample cards
 ```
 
 ---
@@ -189,18 +209,20 @@ alpha_decay_demo/
 1. **Simulate** → `data/signals.csv`, `data/orders.csv`, `data/child_fills.csv`, `data/market.csv`
 2. **Ingest** → `db/alpha.sqlite` with indices
 3. **Label** → `data/labels.parquet` (alpha decay at parent-order level)
-4. **Features** → `data/features.parquet` (microstructure + order footprint)
+4. **Features** → `data/features.parquet` (arrival microstructure + planned policy knobs + regime flags)
 5. **Train** → metrics & plots saved to `data/`
 6. **Explain** → `data/explanations.jsonl` (one card per parent order)
+7. **What-if (optional)** → `data/what_if.csv` with predictive/structural scenario deltas
 
 ---
 
 ## Modeling & evaluation
 
 - **Split**: time-aware (last signal date = test; earlier dates = train)
-- **Regression**: Elastic Net predicts `alpha_decay` (bps)
-- **Classification**: Logistic Regression with a tuned probability threshold
-- **Outputs**: scatter + ROC plots, console metrics, and feature importance
+- **Regression**: HistGradientBoostingRegressor with monotonic constraints on key drivers predicts `alpha_decay` (bps).
+- **Classification**: LogisticRegressionCV (balanced) with two tuned thresholds (Max-F1 and base-rate).
+- **Diagnostics**: permutation importance (reg), rolling-origin eval by day, naive baseline (k·side_sign), optional prediction intervals.
+- **Outputs**: scatter + ROC plots, console metrics, and saved artifacts (`model_*.pkl`, `feature_cols.json`, optional `reg_intervals.parquet`).
 
 ---
 
@@ -225,3 +247,18 @@ alpha_decay_demo/
 - **Flat predictions / empty plots** → regenerate data and check feature importance + prediction std.
 
 ---
+
+## Notes & limitations
+
+- Data are synthetic and intentionally small; absolute metric levels are illustrative.
+- Features are constructed from arrival-time context to avoid leakage; “post-trade” diagnostics are kept separate.
+- Regime flags and thresholds are simple by design; adapt to your production standards before live use.
+
+---
+
+## Improvements in progress
+
+- More realistic mock data and mean-reversion signal variants
+- Ensemble models and per-regime calibration
+- Expanded what-if scenarios and structural re-simulation
+- AI interpretation: per-parent narratives, per-asset/day summaries, market context, and a shareable daily report
