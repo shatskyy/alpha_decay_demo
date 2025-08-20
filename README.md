@@ -3,8 +3,8 @@
 ## Improvements in Progress
 
 Implementing fixes for regression performance issues: 
-- Adding real-data pipeline with Polygon.io API
-- Mean-reversion signals using real market data, and simulating parent/child fills from those signals 
+- Improving mock data
+- Mean-reversion signals, and simulating parent/child fills from those signals 
 - Ensemble models for classification and prediction
 - Enhanced LLM connectivity
 
