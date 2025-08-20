@@ -127,6 +127,7 @@ All AI features are opt-in and degrade gracefully to rule-based text when disabl
     "Monitor for regime change - high volatility detected"
   ]
 }
+```
 ### 2. Performance Analytics
 - **Regression Diagnostics**: Prediction accuracy, residual analysis, feature importance
 - **Classification Metrics**: ROC-AUC, precision-recall curves, threshold optimization
