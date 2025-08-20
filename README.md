@@ -112,6 +112,7 @@ Classification ROC-AUC on test: 0.74
 Precision/Recall @ tuned threshold: 0.41 / 0.53
 Top permutation importances: spread_bp, imbalance, urgency_tag
 ```
+<img src="data/regression_scatter.png" width="420">
 
 <img src="data/roc_curve.png" width="420">
 
