@@ -21,9 +21,9 @@ This project aims to provide a framework for executoion traders who want to move
 
 In systematic trading, a signal’s predictive edge decays quickly. Execution must be understood as preserving that edge, along with minimzing the cost.
 
-\[
+$$
 \text{Realized Alpha} = \text{Predicted Alpha} - (\text{slippage} + \text{market impact} + \text{signal decay})
-\]
+$$
 
 This demo operationalizes that idea end-to-end.
 
