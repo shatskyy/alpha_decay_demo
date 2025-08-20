@@ -33,16 +33,19 @@ This demo operationalizes that idea end-to-end.
 
 - **End-to-end workflow**: signal → parent order → child fills → market context → labels → features → models → explanations
 - **Labels**: parent-level `alpha_decay` in bps and a `decay_flag` based on adaptive thresholds
-  alpha_decay = signal_alpha - execution_alpha
 
 $$
 \text{signal alpha} = \text{direction} * (\text{future price} - \text{signal price})
 $$
+
 Theoretical Alpha if the signal could be acted on instant instantaneously
+
 $$
 \text{execution alpha} = \text{direction} * (\text{verage fill_price} - \text{signal price})
 $$
-Realized Alpha after accounting for execution delays and market impact 
+
+Realized Alpha after accounting for execution delays and market impact
+
 **$$
 \text{alpha decay_bps} = (\text{signal alpha} - \text{execution alpha}) * 10000
 $$**
