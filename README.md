@@ -41,13 +41,13 @@ $$
 Theoretical Alpha if the signal could be acted on instant instantaneously
 
 $$
-\text{execution alpha} = \text{direction} * (\text{verage fill_price} - \text{signal price})
+\text{execution alpha} = \text{direction} * (\text{verage fill price} - \text{signal price})
 $$
 
 Realized Alpha after accounting for execution delays and market impact
 
 **$$
-\text{alpha decay_bps} = (\text{signal alpha} - \text{execution alpha}) * 10000
+\text{alpha decay bps} = (\text{signal alpha} - \text{execution alpha}) * 10000
 $$**
 
 
