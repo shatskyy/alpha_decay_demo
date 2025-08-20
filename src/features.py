@@ -175,6 +175,26 @@ def build_features() -> Tuple[pd.DataFrame, pd.Series, pd.Series, pd.DataFrame]:
 	# Merge aggregates and orders to labels
 	df = lbl.merge(agg, on="parent_id", how="left").merge(orders_min, on="parent_id", how="left")
 
+	### New
+
+	# Merge aggregates and orders to labels
+	df = lbl.merge(agg, on="parent_id", how="left").merge(orders_min, on="parent_id", how="left")
+
+	# Include signal context in features (don't exclude it!)
+	# Signal context features
+	df["signal_score"] = df["signal_score"].fillna(0.0)
+	df["signal_strength_rank"] = df["signal_strength_rank"].fillna(0.5)
+
+	# Signal-microstructure interactions
+	df["signal_x_spread"] = df["signal_score"] * df["spread_bp"].fillna(0.0)
+	df["signal_x_imbalance"] = df["signal_score"] * df["imbalance"].fillna(0.0)
+	df["strength_x_urgency_high"] = df["signal_strength_rank"] * df["urgency_HIGH"]
+
+	# Arrival microstructure snapshot via asof-merge
+	arrival_keys = df[["parent_id", "asset", "ts_arrival"]].dropna()
+
+	###
+
 	# Arrival microstructure snapshot via asof-merge
 	arrival_keys = df[["parent_id", "asset", "ts_arrival"]].dropna()
 	arrival_snap = _arrival_snapshot(
