@@ -83,7 +83,10 @@ def _select_feature_columns(df: pd.DataFrame) -> List[str]:
 		"open_close_bucket",
 	}
 	# Exclude signal variables from decay modeling; reserve for policy mapping/reporting
-	exclude_signal = {"signal_score", "signal_strength_rank"}
+	### NEW
+	# exclude_signal = {"signal_score", "signal_strength_rank"}
+	exclude_signal = set()
+	###
 	cand = [c for c in df.columns if c not in exclude and c not in exclude_signal]
 	# Keep only numeric dtypes
 	feature_cols = [c for c in cand if pd.api.types.is_numeric_dtype(df[c])]
