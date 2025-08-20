@@ -88,6 +88,24 @@ def _risk_bucket_quantile(df_test: pd.DataFrame) -> pd.Series:
 	return df_test["pred_bps"].apply(bucket)
 
 
+def _canonical_questions() -> List[str]:
+	return [
+		"What alpha will we preserve over the next horizon?",
+		"How should we adjust participation/urgency/dark share to improve capture?",
+		"What is the expected uplift vs a simple POV benchmark?",
+	]
+
+
+def _load_intervals(paths: Paths) -> pd.DataFrame:
+	pi_path = paths.data_dir / "reg_intervals.parquet"
+	if pi_path.exists():
+		try:
+			return pd.read_parquet(pi_path)
+		except Exception:
+			return pd.DataFrame()
+	return pd.DataFrame()
+
+
 def _permutation_drivers(reg_pipeline, X_test: pd.DataFrame, y_test: pd.Series, feature_cols: List[str], top_k: int = 3, random_state: int = 7) -> List[Dict[str, float]]:
 	perm = permutation_importance(reg_pipeline, X_test, y_test, n_repeats=10, random_state=7, n_jobs=1)
 	pairs = sorted(zip(feature_cols, perm.importances_mean), key=lambda x: abs(x[1]), reverse=True)[:top_k]
@@ -108,6 +126,34 @@ def _attach_sign_via_spearman(drivers: List[Dict[str, float]], X_train: pd.DataF
 			corr = np.corrcoef(x_rank, y_rank)[0, 1]
 			d["sign"] = "+" if (corr or 0) >= 0 else "-"
 	return drivers
+
+
+def _policy_levers(df_row: pd.Series) -> List[Dict[str, str]]:
+	# Identify 4–6 policy-aware levers and whether they are arrival-only
+	levers = []
+	def add(name: str, val, arrival_only: bool):
+		levers.append({"name": name, "value": str(val), "scope": "arrival-only" if arrival_only else "post-trade"})
+	for nm in ["participation_cap", "urgency_tag", "pct_dark", "pct_marketable", "imbalance", "open_close_bucket"]:
+		if nm in df_row.index:
+			add(nm, df_row.get(nm), nm in ["participation_cap", "urgency_tag", "imbalance", "open_close_bucket"])
+	return levers
+
+
+def _benchmarks(df_test: pd.DataFrame) -> pd.Series:
+	# Simple spread-only and POV-15% heuristic baselines in bps
+	spread_only = df_test.get("spread_bp", pd.Series(0.0, index=df_test.index)).astype(float)
+	# POV baseline proxy: proportional to participation_cap * spread
+	pov15 = 0.15 * df_test.get("spread_bp", pd.Series(0.0, index=df_test.index)).astype(float)
+	return pd.Series(spread_only, index=df_test.index), pd.Series(pov15, index=df_test.index)
+
+
+def _confidence_score(row: pd.Series) -> float:
+	# Combine interval width and regime flags into a simple 0-1 score
+	q10, q90 = row.get("q10", np.nan), row.get("q90", np.nan)
+	width = float(q90 - q10) if (pd.notna(q10) and pd.notna(q90)) else np.nan
+	base = 0.7 if pd.isna(width) else max(0.1, 1.0 - (abs(width) / 60.0))
+	pen = 0.1 * int(row.get("regime_high_vol", 0)) + 0.1 * int(row.get("regime_open", 0))
+	return float(np.clip(base - pen, 0.0, 1.0))
 
 
 def generate_explanations() -> Path:
@@ -134,6 +180,18 @@ def generate_explanations() -> Path:
 	# Score
 	pred_bps = reg.predict(X_test)
 	df_test["pred_bps"] = pred_bps
+	# Attach intervals if available
+	intervals = _load_intervals(paths)
+	if not intervals.empty:
+		intervals = intervals.set_index("parent_id")
+		for col in ["q10", "q50", "q90"]:
+			if col in intervals.columns:
+				df_test[col] = df_test["parent_id"].map(intervals[col])
+
+	# Baselines
+	spread_only, pov15 = _benchmarks(df_test)
+	df_test["spread_only_bps"] = spread_only
+	df_test["pov15_bps"] = pov15
 
 	# Quantile risk buckets on test predictions
 	df_test["risk_bucket"] = _risk_bucket_quantile(df_test)
@@ -191,12 +249,22 @@ def generate_explanations() -> Path:
 			guards.append(f"Do not exceed participation_cap ({int(pcap)}%)")
 		else:
 			guards.append("Do not exceed participation_cap")
+		# Interval-aware caution
+		if not np.isnan(row.get("q90", np.nan)) and not np.isnan(row.get("q10", np.nan)):
+			width = float(row.get("q90")) - float(row.get("q10"))
+			if width > 8.0:  # wide uncertainty band
+				guards.append("High uncertainty: prefer robust tactics; avoid overfitting to point estimate")
 
 		card = {
 			"parent_id": pid,
 			"prediction_bps": float(row["pred_bps"]),
+			"interval_bps": {"q10": float(row.get("q10", np.nan)), "q50": float(row.get("q50", np.nan)), "q90": float(row.get("q90", np.nan))},
 			"risk_bucket": bucket,
 			"top_drivers": drivers,
+			"policy_levers": _policy_levers(row),
+			"questions": _canonical_questions(),
+			"benchmarks": {"spread_only_bps": float(row.get("spread_only_bps", np.nan)), "pov15_bps": float(row.get("pov15_bps", np.nan)), "uplift_vs_pov": float(row.get("pred_bps", np.nan) - row.get("pov15_bps", np.nan))},
+			"confidence": _confidence_score(row),
 			"suggested_tactics": suggestions,
 			"guardrails": guards,
 		}

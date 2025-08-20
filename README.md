@@ -1,10 +1,13 @@
 # Alpha Decay Demo
+
 ---
+
 ## Improvements in Progress
 
-Implementing fixes for regression performance issues: 
+Implementing fixes for regression performance issues:
+
 - Improving mock data
-- Mean-reversion signals, and simulating parent/child fills from those signals 
+- Mean-reversion signals, and simulating parent/child fills from those signals
 - Ensemble models for classification and prediction
 - Enhanced LLM connectivity
 
@@ -30,10 +33,10 @@ Execution algorithms, routing logic, and urgency decisions are all factors in th
 
 The Alpha Decay Demo is a minimal, reproducible sandbox designed to illustrate this principle. It simulates signals, orders, fills, and market data, then:
 
-* Computes alpha decay labels at the parent-order level
-* Builds features from order characteristics and microstructure
-* Trains baseline models to predict decay risk
-* Produces explanation cards that translate model outputs into trader-friendly insights and tactics
+- Computes alpha decay labels at the parent-order level
+- Builds features from order characteristics and microstructure
+- Trains baseline models to predict decay risk
+- Produces explanation cards that translate model outputs into trader-friendly insights and tactics
 
 By walking through this workflow, the demo shows how execution research can evolve from pure cost minimization toward a **signal preservation framework**—bridging research signals, execution tactics, and realized alpha.
 
@@ -41,9 +44,9 @@ By walking through this workflow, the demo shows how execution research can evol
 
 A lightweight research proof of concept that demonstrates how alpha-aware execution can be measured, modeled, and explained.
 
-* **Problem traders face**: signals decay quickly after order arrival, driving slippage and timing risk.
-* **What this demo does**: simulates orders + fills, computes decay labels, trains models, and produces transparent “explanation cards” that reveal what drove outcomes.
-* **Why it matters**: it frames execution as a signal preservation problem.
+- **Problem traders face**: signals decay quickly after order arrival, driving slippage and timing risk.
+- **What this demo does**: simulates orders + fills, computes decay labels, trains models, and produces transparent “explanation cards” that reveal what drove outcomes.
+- **Why it matters**: it frames execution as a signal preservation problem.
 
 ⚠️ Data is simulated and synthetic
 
@@ -51,35 +54,34 @@ A lightweight research proof of concept that demonstrates how alpha-aware execut
 
 ## Questions it helps answer
 
-* How quickly do signals decay post-execution?
-* Which microstructure features best predict decay?
-* How should urgency or participation caps change when decay risk is high?
-* Can pre-trade analytics / TCA include decay metrics alongside slippage and cost?
+- How quickly do signals decay post-execution?
+- Which microstructure features best predict decay?
+- How should urgency or participation caps change when decay risk is high?
+- Can pre-trade analytics / TCA include decay metrics alongside slippage and cost?
 
 ---
 
 ## In this Demo:
 
-* **End-to-end workflow**:
+- **End-to-end workflow**:
   signal → parent order → child fills → market context → labels → features → models → explanations
-* **Database**: all orders, fills, and market bars joined in one SQLite file
-* **Models**: regression (work in progress) & classification predicting signal decay in bps
-* **Visuals**: regression scatter, ROC curve
-* **Explanation Cards**: concise summaries of predicted risk and drivers
+- **Database**: all orders, fills, and market bars joined in one SQLite file
+- **Models**: regression (work in progress) & classification predicting signal decay in bps
+- **Visuals**: regression scatter, ROC curve
+- **Explanation Cards**: concise summaries of predicted risk and drivers
 
 ---
 
 ## Quick start
 
-
 ```bash
 # 1) Clone repo
 # 2) Create a virtual environment and install deps
-python -m venv .venv && source .venv/bin/activate
+python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
 # 3) Run the full pipeline (simulate → DB → labels → features → train → explain)
-python -m src.run_demo
+python3 -m src.run_demo
 ```
 
 Outputs are written to `data/` and `db/`.
@@ -97,6 +99,7 @@ export OPENAI_MODEL=gpt-4o-mini   # optional
 export LLM_ENABLE=1               # enable LLM summaries
 python -m src.run_demo
 ```
+
 ---
 
 ## What you’ll see (example)
@@ -113,7 +116,6 @@ Top permutation importances: spread_bp, imbalance, urgency_tag
 <img src="data/roc_curve.png" width="420">
 
 The classification task (“high decay” vs “not”) shows useful discrimination (AUC \~0.72), even on a small test set. The stepped shape reflects the small sample size, but it suggests features like **spread**, **imbalance**, and **urgency** carry information about decay risk.
-
 
 **Explanation card (one line of `data/explanations.jsonl`):**
 
@@ -194,31 +196,31 @@ alpha_decay_demo/
 
 ## Modeling & evaluation
 
-* **Split**: time-aware (last signal date = test; earlier dates = train)
-* **Regression**: Elastic Net predicts `alpha_decay` (bps)
-* **Classification**: Logistic Regression with a tuned probability threshold
-* **Outputs**: scatter + ROC plots, console metrics, and feature importance
+- **Split**: time-aware (last signal date = test; earlier dates = train)
+- **Regression**: Elastic Net predicts `alpha_decay` (bps)
+- **Classification**: Logistic Regression with a tuned probability threshold
+- **Outputs**: scatter + ROC plots, console metrics, and feature importance
 
 ---
 
 ## Quick glossary
 
-* **Alpha**: expected edge (excess return) from a signal over a short horizon.
-* **Alpha decay**: how fast that edge fades after the signal and as you trade.
-* **bps**: basis points (1 bps = 0.01%).
-* **Label**: the value a model tries to predict (e.g., alpha\_decay).
-* **Feature**: an input variable (e.g., spread, imbalance, urgency).
-* **ROC-AUC**: 1.0 is perfect, 0.5 is random; measures classification discrimination.
-* **Precision/Recall**: how accurate positive flags are, and how many true positives you find.
-* **SNR (signal-to-noise ratio)**: how much useful variation exists vs. noise.
+- **Alpha**: expected edge (excess return) from a signal over a short horizon.
+- **Alpha decay**: how fast that edge fades after the signal and as you trade.
+- **bps**: basis points (1 bps = 0.01%).
+- **Label**: the value a model tries to predict (e.g., alpha_decay).
+- **Feature**: an input variable (e.g., spread, imbalance, urgency).
+- **ROC-AUC**: 1.0 is perfect, 0.5 is random; measures classification discrimination.
+- **Precision/Recall**: how accurate positive flags are, and how many true positives you find.
+- **SNR (signal-to-noise ratio)**: how much useful variation exists vs. noise.
 
 ---
 
 ## Troubleshooting
 
-* **SQLite ingest errors** → re-run `python -m src.simulate_data` to regenerate CSVs.
-* **`merge_asof` sorting** → handled per-asset in `features.py`; ensure input CSVs are fresh.
-* **Classification shows 0/0 Precision/Recall** → use the tuned threshold printed to console (don’t default to 0.5).
-* **Flat predictions / empty plots** → regenerate data and check feature importance + prediction std.
+- **SQLite ingest errors** → re-run `python -m src.simulate_data` to regenerate CSVs.
+- **`merge_asof` sorting** → handled per-asset in `features.py`; ensure input CSVs are fresh.
+- **Classification shows 0/0 Precision/Recall** → use the tuned threshold printed to console (don’t default to 0.5).
+- **Flat predictions / empty plots** → regenerate data and check feature importance + prediction std.
 
 ---

@@ -31,6 +31,7 @@ from . import label
 from . import features
 from . import train
 from . import predict_explain
+from . import what_if
 
 
 @dataclass(frozen=True)
@@ -145,6 +146,13 @@ def main() -> None:
 	print("[6/6] Predicting + generating explanation cards…")
 	expl_path = predict_explain.generate_explanations()
 	print(f"Explanations | {expl_path}")
+
+	# What-if scenarios
+	try:
+		wi_path = what_if.run()
+		print(f"What-if | {wi_path}")
+	except Exception as e:
+		print(f"What-if | skipped due to error: {e}")
 
 	# Copy examples for read-only sharing
 	_copy_examples(paths)

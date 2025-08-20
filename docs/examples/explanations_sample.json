@@ -1,86 +1,188 @@
 [
   {
     "parent_id": "72358df74a01258b60d79a0b17d61b406b7f62d0",
-    "prediction_bps": 2.2242575367396915,
-    "risk_bucket": "HIGH",
+    "prediction_bps": -9.351447609790556,
+    "interval_bps": {
+      "q10": -27.476479908455254,
+      "q50": -6.637275049621175,
+      "q90": 14.003112515745801
+    },
+    "risk_bucket": "LOW",
     "top_drivers": [
       {
-        "feature": "lit_volume_est",
-        "importance": -0.002644235873545542,
-        "sign": "-"
+        "feature": "side_sign",
+        "importance": 0.3098894173761752,
+        "sign": "+"
+      },
+      {
+        "feature": "depth1_ask",
+        "importance": -0.0854727251987592,
+        "sign": "+"
       },
       {
         "feature": "minute_of_day",
-        "importance": -0.0026007294617030664,
+        "importance": -0.07098646242746584,
         "sign": "-"
-      },
-      {
-        "feature": "signal_strength_rank",
-        "importance": 0.002421027621909144,
-        "sign": "+"
       }
     ],
+    "policy_levers": [
+      {
+        "name": "participation_cap",
+        "value": "22",
+        "scope": "arrival-only"
+      },
+      {
+        "name": "imbalance",
+        "value": "-0.0218607848758652",
+        "scope": "arrival-only"
+      },
+      {
+        "name": "open_close_bucket",
+        "value": "OPEN1H",
+        "scope": "arrival-only"
+      }
+    ],
+    "questions": [
+      "What alpha will we preserve over the next horizon?",
+      "How should we adjust participation/urgency/dark share to improve capture?",
+      "What is the expected uplift vs a simple POV benchmark?"
+    ],
+    "benchmarks": {
+      "spread_only_bps": 4.426247648555056,
+      "pov15_bps": 0.6639371472832584,
+      "uplift_vs_pov": -10.015384757073814
+    },
+    "confidence": 0.20867345959664904,
     "suggested_tactics": [
       "Balanced POV ~10\u201315%, mix LIT/DARK, throttle marketable flow"
     ],
     "guardrails": [
-      "Do not exceed participation_cap"
+      "Do not exceed participation_cap (22%)",
+      "High uncertainty: prefer robust tactics; avoid overfitting to point estimate"
     ]
   },
   {
     "parent_id": "94296175ae987fc7db6c2f584b1981f786e1018d",
-    "prediction_bps": 1.1555691727146802,
-    "risk_bucket": "MED",
+    "prediction_bps": -3.188699014510701,
+    "interval_bps": {
+      "q10": -37.529171028277396,
+      "q50": -6.348423285654508,
+      "q90": 26.624070876488286
+    },
+    "risk_bucket": "LOW",
     "top_drivers": [
       {
-        "feature": "lit_volume_est",
-        "importance": -0.002644235873545542,
-        "sign": "-"
+        "feature": "side_sign",
+        "importance": 0.3098894173761752,
+        "sign": "+"
+      },
+      {
+        "feature": "depth1_ask",
+        "importance": -0.0854727251987592,
+        "sign": "+"
       },
       {
         "feature": "minute_of_day",
-        "importance": -0.0026007294617030664,
+        "importance": -0.07098646242746584,
         "sign": "-"
-      },
-      {
-        "feature": "signal_strength_rank",
-        "importance": 0.002421027621909144,
-        "sign": "+"
       }
     ],
+    "policy_levers": [
+      {
+        "name": "participation_cap",
+        "value": "35",
+        "scope": "arrival-only"
+      },
+      {
+        "name": "imbalance",
+        "value": "-0.1147683290363823",
+        "scope": "arrival-only"
+      },
+      {
+        "name": "open_close_bucket",
+        "value": "OPEN1H",
+        "scope": "arrival-only"
+      }
+    ],
+    "questions": [
+      "What alpha will we preserve over the next horizon?",
+      "How should we adjust participation/urgency/dark share to improve capture?",
+      "What is the expected uplift vs a simple POV benchmark?"
+    ],
+    "benchmarks": {
+      "spread_only_bps": 5.092038597652282,
+      "pov15_bps": 0.7638057896478423,
+      "uplift_vs_pov": -3.952504804158543
+    },
+    "confidence": 0.0,
     "suggested_tactics": [
       "Balanced POV ~10\u201315%, mix LIT/DARK, throttle marketable flow"
     ],
     "guardrails": [
-      "Do not exceed participation_cap"
+      "Do not exceed participation_cap (35%)",
+      "High uncertainty: prefer robust tactics; avoid overfitting to point estimate"
     ]
   },
   {
     "parent_id": "af59f6c35d3a6172a5e9fe6e53b9e5297dcc942e",
-    "prediction_bps": 1.3419013056879312,
+    "prediction_bps": -0.07406898147857821,
+    "interval_bps": {
+      "q10": -27.440624409505578,
+      "q50": -5.89014232188571,
+      "q90": 22.74723846160651
+    },
     "risk_bucket": "MED",
     "top_drivers": [
       {
-        "feature": "lit_volume_est",
-        "importance": -0.002644235873545542,
-        "sign": "-"
+        "feature": "side_sign",
+        "importance": 0.3098894173761752,
+        "sign": "+"
+      },
+      {
+        "feature": "depth1_ask",
+        "importance": -0.0854727251987592,
+        "sign": "+"
       },
       {
         "feature": "minute_of_day",
-        "importance": -0.0026007294617030664,
+        "importance": -0.07098646242746584,
         "sign": "-"
-      },
-      {
-        "feature": "signal_strength_rank",
-        "importance": 0.002421027621909144,
-        "sign": "+"
       }
     ],
+    "policy_levers": [
+      {
+        "name": "participation_cap",
+        "value": "20",
+        "scope": "arrival-only"
+      },
+      {
+        "name": "imbalance",
+        "value": "0.4612089449733534",
+        "scope": "arrival-only"
+      },
+      {
+        "name": "open_close_bucket",
+        "value": "OPEN1H",
+        "scope": "arrival-only"
+      }
+    ],
+    "questions": [
+      "What alpha will we preserve over the next horizon?",
+      "How should we adjust participation/urgency/dark share to improve capture?",
+      "What is the expected uplift vs a simple POV benchmark?"
+    ],
+    "benchmarks": {
+      "spread_only_bps": 5.795001810938971,
+      "pov15_bps": 0.8692502716408457,
+      "uplift_vs_pov": -0.9433192531194239
+    },
+    "confidence": 0.0,
     "suggested_tactics": [
       "Balanced POV ~10\u201315%, mix LIT/DARK, throttle marketable flow"
     ],
     "guardrails": [
-      "Do not exceed participation_cap"
+      "Do not exceed participation_cap (20%)",
+      "High uncertainty: prefer robust tactics; avoid overfitting to point estimate"
     ]
   }
 ]

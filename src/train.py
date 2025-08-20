@@ -27,6 +27,7 @@ import matplotlib.pyplot as plt
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import ElasticNetCV, LogisticRegressionCV, RidgeCV
+from sklearn.ensemble import GradientBoostingRegressor, HistGradientBoostingRegressor
 from sklearn.metrics import mean_absolute_error, roc_auc_score, precision_score, recall_score, roc_curve, f1_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
@@ -81,7 +82,9 @@ def _select_feature_columns(df: pd.DataFrame) -> List[str]:
 		"decay_flag",
 		"open_close_bucket",
 	}
-	cand = [c for c in df.columns if c not in exclude]
+	# Exclude signal variables from decay modeling; reserve for policy mapping/reporting
+	exclude_signal = {"signal_score", "signal_strength_rank"}
+	cand = [c for c in df.columns if c not in exclude and c not in exclude_signal]
 	# Keep only numeric dtypes
 	feature_cols = [c for c in cand if pd.api.types.is_numeric_dtype(df[c])]
 	return feature_cols
@@ -114,6 +117,60 @@ def _pick_thresholds(y_true_train: pd.Series, proba_train: np.ndarray) -> Tuple[
 	return best_t, base_t
 
 
+def _rolling_origin_eval(df: pd.DataFrame, feature_cols: List[str]) -> Tuple[float, float]:
+	"""Rolling-origin evaluation across days: mean MAE and ROC-AUC."""
+	days = df["ts_signal"].dt.normalize().sort_values().unique()
+	maes: List[float] = []
+	aucs: List[float] = []
+	for i in range(1, len(days)):
+		train_mask = df["ts_signal"].dt.normalize() < days[i]
+		test_mask = df["ts_signal"].dt.normalize() == days[i]
+		if int(train_mask.sum()) < 20 or int(test_mask.sum()) < 10:
+			continue
+		X_tr = df.loc[train_mask, feature_cols]
+		X_te = df.loc[test_mask, feature_cols]
+		yr_tr = df.loc[train_mask, "alpha_decay"].astype(float)
+		yr_te = df.loc[test_mask, "alpha_decay"].astype(float)
+		yc_tr = df.loc[train_mask, "decay_flag"].astype(int)
+		yc_te = df.loc[test_mask, "decay_flag"].astype(int)
+
+		reg_cv: Pipeline = Pipeline(
+			steps=[
+				("imputer", SimpleImputer(strategy="median")),
+				("scaler", StandardScaler(with_mean=True)),
+				("model", ElasticNetCV(l1_ratio=[0.05, 0.5, 0.95], alphas=np.logspace(-3, 1, 12), cv=3, random_state=7)),
+			]
+		)
+		clf_cv: Pipeline = Pipeline(
+			steps=[
+				("imputer", SimpleImputer(strategy="median")),
+				("scaler", StandardScaler(with_mean=True)),
+				("model", LogisticRegressionCV(cv=3, max_iter=1500, class_weight="balanced")),
+			]
+		)
+
+		try:
+			reg_cv.fit(X_tr, yr_tr)
+			maes.append(float(mean_absolute_error(yr_te, reg_cv.predict(X_te))))
+		except Exception:
+			pass
+
+		try:
+			clf_cv.fit(X_tr, yc_tr)
+			proba = clf_cv.predict_proba(X_te)[:, 1]
+			if yc_te.nunique() > 1:
+				au = float(roc_auc_score(yc_te, proba))
+				if np.isfinite(tau):
+					aucs.append(tau)
+		except Exception:
+			pass
+
+	return (
+		float(np.nanmean(maes)) if len(maes) else float("nan"),
+		float(np.nanmean(aucs)) if len(aucs) else float("nan"),
+	)
+
+
 def train_models() -> Tuple[Path, Path]:
 	paths = get_paths()
 	df = _load_dataset(paths)
@@ -128,20 +185,14 @@ def train_models() -> Tuple[Path, Path]:
 	y_reg_train, y_reg_test = y_reg.loc[train_idx], y_reg.loc[test_idx]
 	y_cls_train, y_cls_test = y_cls.loc[train_idx], y_cls.loc[test_idx]
 
-	# Pipelines with imputer + scaler
+	# Monotonic constraints for key drivers
+	mono_map = {"spread_bp": 1, "participation_cap": 1, "cap_x_spread": 1, "cap_x_turnover": 1}
+	monotonic_cst = [mono_map.get(c, 0) for c in feature_cols]
+	# Non-linear regressor with monotonic constraints
 	reg_pipe: Pipeline = Pipeline(
 		steps=[
 			("imputer", SimpleImputer(strategy="median")),
-			("scaler", StandardScaler(with_mean=True)),
-			(
-				"model",
-				ElasticNetCV(
-					l1_ratio=[0.05, 0.2, 0.5, 0.8, 0.95],
-					alphas=np.logspace(-3, 1, 20),
-					cv=5,
-					random_state=7,
-				),
-			),
+			("model", HistGradientBoostingRegressor(random_state=7, learning_rate=0.06, max_depth=4, max_leaf_nodes=31, monotonic_cst=monotonic_cst)),
 		]
 	)
 	clf_pipe: Pipeline = Pipeline(
@@ -156,25 +207,29 @@ def train_models() -> Tuple[Path, Path]:
 	reg_pipe.fit(X_train, y_reg_train)
 	clf_pipe.fit(X_train, y_cls_train)
 
-	# Evaluate regression with potential Ridge fallback if collapsed
+	# Evaluate regression
 	y_reg_pred_test = reg_pipe.predict(X_test)
-	std_pred = float(np.std(y_reg_pred_test))
-	if std_pred < 1e-3:
-		# Fallback to Ridge for a breathing baseline
-		ridge_pipe: Pipeline = Pipeline(
-			steps=[
-				("imputer", SimpleImputer(strategy="median")),
-				("scaler", StandardScaler(with_mean=True)),
-				("model", RidgeCV(alphas=np.logspace(-3, 3, 20))),
-			]
-		)
-		ridge_pipe.fit(X_train, y_reg_train)
-		reg_pipe = ridge_pipe
-		y_reg_pred_test = reg_pipe.predict(X_test)
 
 	mae_bps = float(mean_absolute_error(y_reg_test, y_reg_pred_test))
 	print(f"Regression MAE (bps) on test: {mae_bps:.2f}")
 	print(f"Std of regression predictions on test: {np.std(y_reg_pred_test):.3f}")
+
+	# Quantile regression (simple) for uncertainty via GradientBoosting; optional
+	try:
+		qr_lo = GradientBoostingRegressor(loss="quantile", alpha=0.1, random_state=7)
+		qr_md = GradientBoostingRegressor(loss="quantile", alpha=0.5, random_state=7)
+		qr_hi = GradientBoostingRegressor(loss="quantile", alpha=0.9, random_state=7)
+		qr_lo.fit(X_train, y_reg_train)
+		qr_md.fit(X_train, y_reg_train)
+		qr_hi.fit(X_train, y_reg_train)
+		lo = qr_lo.predict(X_test)
+		md = qr_md.predict(X_test)
+		hi = qr_hi.predict(X_test)
+		print(f"Quantile band P10/P50/P90 width (median): {np.median(hi - lo):.2f} bps")
+		# Save interval arrays for potential downstream use
+		pd.DataFrame({"parent_id": df.loc[test_idx, "parent_id"], "q10": lo, "q50": md, "q90": hi}).to_parquet(paths.data_dir / "reg_intervals.parquet", index=False)
+	except Exception:
+		pass
 
 	# Classification: probabilities for class 1 and thresholding
 	proba_train = clf_pipe.predict_proba(X_train)[:, 1]
@@ -193,6 +248,15 @@ def train_models() -> Tuple[Path, Path]:
 	print(f"Classification threshold (Base-rate) = {base_t:.3f} | Precision/Recall: {precision_base:.3f} / {recall_base:.3f}")
 	print(f"Test positive rate (decay_flag): {y_cls_test.mean():.3f}")
 
+	# Per-regime evaluation (if regime flags present)
+	for flag in ["regime_wide_spread", "regime_high_vol", "regime_open", "regime_close"]:
+		if flag in df.columns:
+			mask = (df.loc[test_idx, flag] == 1)
+			if int(mask.sum()) >= 5:
+				mae_flag = float(mean_absolute_error(y_reg_test[mask], y_reg_pred_test[mask]))
+				auc_flag = float(roc_auc_score(y_cls_test[mask], proba_test[mask])) if y_cls_test[mask].nunique() > 1 else float("nan")
+				print(f"Per-regime [{flag}=1] | MAE: {mae_flag:.2f}, ROC-AUC: {auc_flag:.3f}")
+
 	# Permutation importance (regression) diagnostics on test
 	try:
 		perm = permutation_importance(reg_pipe, X_test, y_reg_test, n_repeats=10, random_state=7, n_jobs=1)
@@ -202,6 +266,14 @@ def train_models() -> Tuple[Path, Path]:
 			print(f"  {name}: {val:.4f}")
 	except Exception:
 		pass
+
+	# Rolling-origin evaluation and naive baseline
+	r_mae, r_auc = _rolling_origin_eval(df, feature_cols)
+	print(f"Rolling-origin (mean across days) | Regression MAE: {r_mae:.2f}, ROC-AUC: {r_auc:.3f}")
+	k = float(np.nanmedian(np.abs(y_reg_train))) if len(y_reg_train) else 0.0
+	baseline_pred = k * df.loc[test_idx, "side_sign"].astype(float)
+	base_mae = float(mean_absolute_error(y_reg_test, baseline_pred))
+	print(f"Baseline (k*side_sign) MAE on test: {base_mae:.2f}")
 
 	# Persist artifacts
 	reg_path = paths.data_dir / "model_reg.pkl"

@@ -70,7 +70,7 @@ def _arrival_snapshot(market_df: pd.DataFrame, arrivals: pd.DataFrame) -> pd.Dat
 	arrivals = arrivals.dropna(subset=["asset", "ts_arrival"]).reset_index(drop=True)
 	market_df = market_df.dropna(subset=["asset", "ts"]).reset_index(drop=True)
 
-	expected_cols = ["spread_bp", "imbalance", "rv_5m", "rv_30m", "depth1_bid", "depth1_ask", "turnover", "mid"]
+	expected_cols = ["spread_bp", "imbalance", "rv_5m", "rv_30m", "depth1_bid", "depth1_ask", "turnover", "mid", "adv"]
 	parts: List[pd.DataFrame] = []
 	assets = sorted(set(arrivals["asset"]).intersection(set(market_df["asset"])))
 	for asset in assets:
@@ -130,6 +130,11 @@ def build_features() -> Tuple[pd.DataFrame, pd.Series, pd.Series, pd.DataFrame]:
 			conn,
 			parse_dates=["ts_signal"],
 		)
+		# Orders policy knobs known at arrival
+		orders_min = pd.read_sql_query(
+			"SELECT parent_id, urgency_tag, participation_cap FROM orders",
+			conn,
+		)
 		# Child fills (full; small enough) for footprint metrics
 		child = pd.read_sql_query(
 			"SELECT parent_id, ts, price, qty, venue, order_type FROM child_fills",
@@ -138,7 +143,7 @@ def build_features() -> Tuple[pd.DataFrame, pd.Series, pd.Series, pd.DataFrame]:
 		)
 		# Market minute bars
 		market = pd.read_sql_query(
-			"SELECT ts, asset, spread_bp, imbalance, rv_5m, rv_30m, depth1_bid, depth1_ask, turnover, mid FROM market",
+			"SELECT ts, asset, spread_bp, imbalance, rv_5m, rv_30m, depth1_bid, depth1_ask, turnover, mid, adv FROM market",
 			conn,
 			parse_dates=["ts"],
 		)
@@ -167,13 +172,13 @@ def build_features() -> Tuple[pd.DataFrame, pd.Series, pd.Series, pd.DataFrame]:
 		.reset_index()
 	)
 
-	# Merge aggregates to labels
-	df = lbl.merge(agg, on="parent_id", how="left")
+	# Merge aggregates and orders to labels
+	df = lbl.merge(agg, on="parent_id", how="left").merge(orders_min, on="parent_id", how="left")
 
 	# Arrival microstructure snapshot via asof-merge
 	arrival_keys = df[["parent_id", "asset", "ts_arrival"]].dropna()
 	arrival_snap = _arrival_snapshot(
-		market_df=market[["asset", "ts", "spread_bp", "imbalance", "rv_5m", "rv_30m", "depth1_bid", "depth1_ask", "turnover", "mid"]],
+		market_df=market[["asset", "ts", "spread_bp", "imbalance", "rv_5m", "rv_30m", "depth1_bid", "depth1_ask", "turnover", "mid", "adv"]],
 		arrivals=arrival_keys,
 	)
 	arrival_cols = [
@@ -184,6 +189,8 @@ def build_features() -> Tuple[pd.DataFrame, pd.Series, pd.Series, pd.DataFrame]:
 		"rv_30m",
 		"depth1_bid",
 		"depth1_ask",
+		"turnover",
+		"adv",
 	]
 	df = df.merge(arrival_snap[[*arrival_cols]], on="parent_id", how="left")
 
@@ -222,32 +229,77 @@ def build_features() -> Tuple[pd.DataFrame, pd.Series, pd.Series, pd.DataFrame]:
 	# Time features
 	df["minute_of_day"] = pd.to_datetime(df["ts_arrival"]).dt.hour * 60 + pd.to_datetime(df["ts_arrival"]).dt.minute
 	df["open_close_bucket"] = pd.to_datetime(df["ts_arrival"]).apply(_bucket_open_close)
+	# Additional time derivatives
+	minutes_since_open = df["minute_of_day"] - (9 * 60 + 30)
+	minutes_to_close = (16 * 60) - df["minute_of_day"]
+	df["minutes_since_open"] = minutes_since_open.clip(lower=0)
+	df["minutes_to_close"] = minutes_to_close.clip(lower=0)
 
 	# Signal side encoding {+1, -1}
 	df["side_sign"] = df["side"].map({"BUY": 1, "SELL": -1}).fillna(0).astype(int)
 
-	# Select outputs
-	numeric_feature_cols = [
-		"age_sec",
-		"exec_dur_sec",
-		"horizon_to_age",
+	# Arrival-only feature set (to avoid leakage): snapshot microstructure, signal context, planned policy knobs
+	arrival_feature_cols = [
 		"spread_bp",
 		"imbalance",
 		"rv_5m",
 		"rv_30m",
 		"depth1_bid",
 		"depth1_ask",
+		"minute_of_day",
+		"minutes_since_open",
+		"minutes_to_close",
+		"signal_score",
+		"signal_strength_rank",
+		"side_sign",
+	]
+	# Add planned policy knobs known at arrival
+	if "participation_cap" in df.columns:
+		arrival_feature_cols.append("participation_cap")
+	# Liquidity proxy features from turnover and ADV
+	if "turnover" in df.columns:
+		arrival_feature_cols.append("turnover")
+	if "adv" in df.columns:
+		arrival_feature_cols.append("adv")
+
+	# Regime flags
+	df["regime_wide_spread"] = (df["spread_bp"] > df["spread_bp"].median()).astype(int)
+	df["regime_high_vol"] = (df["rv_30m"] > df["rv_30m"].quantile(0.75)).astype(int)
+	df["regime_open"] = (df["minutes_since_open"] <= 60).astype(int)
+	df["regime_close"] = (df["minutes_to_close"] <= 60).astype(int)
+	arrival_feature_cols += ["regime_wide_spread", "regime_high_vol", "regime_open", "regime_close"]
+	# Optional engineered interactions (kept numeric-only)
+	df["urgency_MED"] = (df.get("urgency_tag", pd.Series(index=df.index, dtype=object)) == "MED").astype(int) if "urgency_tag" in df.columns else 0
+	df["urgency_HIGH"] = (df.get("urgency_tag", pd.Series(index=df.index, dtype=object)) == "HIGH").astype(int) if "urgency_tag" in df.columns else 0
+	arrival_feature_cols += ["urgency_MED", "urgency_HIGH"]
+
+	# Keep a post-trade leakage set for diagnostics only (not used for training)
+	post_trade_cols = [
+		"age_sec",
+		"exec_dur_sec",
+		"horizon_to_age",
 		"child_qty",
 		"lit_volume_est",
 		"participation_est",
 		"pct_dark",
 		"pct_marketable",
 		"reprice_rate",
-		"minute_of_day",
-		"signal_score",
-		"signal_strength_rank",
-		"side_sign",
 	]
+
+	# Engineered interactions (arrival-only)
+	if "participation_cap" in df.columns:
+		df["cap_x_spread"] = df["participation_cap"].astype(float) * df["spread_bp"].astype(float)
+		df["cap_x_turnover"] = df["participation_cap"].astype(float) * df.get("turnover", pd.Series(0, index=df.index)).astype(float)
+		arrival_feature_cols += ["cap_x_spread", "cap_x_turnover"]
+	# Slopes/changes (arrival-only window): use last-5m for imbalance/rv where available
+	try:
+		# These would ideally be computed upstream; here we proxy with arrival values
+		pass
+	except Exception:
+		pass
+
+	# Final numeric features to use for modeling
+	numeric_feature_cols = [c for c in arrival_feature_cols if c in df.columns]
 	y_reg = df["alpha_decay"].astype(float)
 	y_cls = df["decay_flag"].astype(int)
 
