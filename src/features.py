@@ -269,10 +269,14 @@ def build_features() -> Tuple[pd.DataFrame, pd.Series, pd.Series, pd.DataFrame]:
 		"minute_of_day",
 		"minutes_since_open",
 		"minutes_to_close",
-		"signal_score",
-		"signal_strength_rank",
-		"side_sign",
+		"signal_score",           # ADDED: Include signal!
+    	"signal_strength_rank",   # ADDED: Include signal strength!
+    	"side_sign",
+    	"signal_x_spread",        # ADDED: Signal interactions
+	    "signal_x_imbalance",     # ADDED: Signal interactions  
+	    "strength_x_urgency_high" # ADDED: Signal interactions
 	]
+	
 	# Add planned policy knobs known at arrival
 	if "participation_cap" in df.columns:
 		arrival_feature_cols.append("participation_cap")
