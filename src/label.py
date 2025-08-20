@@ -182,8 +182,36 @@ def build_labels() -> Path:
 	# Alternative slippage-only measure (for comparison)
 	inputs["execution_slippage"] = side_sign * 10000.0 * (inputs["vwap_exec"] - inputs["mid_at_signal"]) / inputs["mid_at_signal"]
 
-	###
+	### NEW
+	
+	# Compute returns in basis points with consistent denominator (mid_at_signal)
+	inputs["r_sig"] = 10000.0 * (inputs["mid_at_target"] - inputs["mid_at_signal"]) / inputs["mid_at_signal"]
+	inputs["r_exec"] = 10000.0 * (inputs["mid_at_target"] - inputs["vwap_exec"]) / inputs["mid_at_signal"]
+	inputs["alpha_decay"] = inputs["r_sig"] - inputs["r_exec"]
+	
+	# Enhanced target variables for better signal-to-noise ratio
+	spread_at_signal = inputs.get("spread_bp_at_signal", pd.Series(2.0, index=inputs.index)).fillna(2.0)
+	rv30_at_signal = inputs.get("rv30_at_signal", pd.Series(0.001, index=inputs.index)).fillna(0.001)
+	
+	# Volatility-adjusted alpha decay
+	volatility_bps = np.sqrt(rv30_at_signal.clip(lower=0.0001, upper=0.01)) * 10000
+	inputs["alpha_decay_vol_adj"] = inputs["alpha_decay"] / volatility_bps
+	
+	# Signal-strength weighted decay
+	signal_strength = inputs.get("signal_strength_rank", pd.Series(0.5, index=inputs.index)).fillna(0.5)
+	inputs["alpha_decay_weighted"] = inputs["alpha_decay"] * signal_strength
+	
+	# Multiple classification thresholds
+	inputs["decay_flag_5bp"] = (inputs["alpha_decay"] > 5.0).astype(int)
+	inputs["decay_flag_10bp"] = (inputs["alpha_decay"] > 10.0).astype(int)
+	inputs["decay_flag_vol"] = (inputs["alpha_decay_vol_adj"] > 1.0).astype(int)
+	
 
+	# Signed measures and capture ratio
+	side_sign = inputs["side"].map({"BUY": 1.0, "SELL": -1.0}).fillna(0.0)
+
+	###
+	
 	# Spread/fee and impact decomposition placeholders (diagnostic, not exact accounting)
 	inputs["spread_fee_bps"] = inputs.get("spread_bp_at_signal", pd.Series(0.0, index=inputs.index)).astype(float)
 	# impact proxy: alpha_preserved minus spread_fee component (signed)
@@ -227,22 +255,37 @@ def build_labels() -> Path:
 
 	# Rename horizon and select columns
 	inputs = inputs.rename(columns={"horizon": "horizon"})
+	# final_cols: List[str] = [
+	# 	"parent_id",
+	# 	"asset",
+	# 	"side",
+	# 	"ts_signal",
+	# 	"ts_arrival",
+	# 	"alpha_decay",
+	# 	"decay_flag",
+	# 	"horizon",
+	# 	"vwap_exec",
+	# 	"r_sig",
+	# 	"r_exec",
+	# 	"alpha_preserved_bps",
+	# 	"capture_ratio",
+	# 	"alpha_preserved_w_bps",
+	# 	"capture_ratio_w",
+	# ]
 	final_cols: List[str] = [
-		"parent_id",
-		"asset",
-		"side",
-		"ts_signal",
-		"ts_arrival",
-		"alpha_decay",
-		"decay_flag",
-		"horizon",
-		"vwap_exec",
-		"r_sig",
-		"r_exec",
-		"alpha_preserved_bps",
-		"capture_ratio",
-		"alpha_preserved_w_bps",
-		"capture_ratio_w",
+	    "parent_id", "asset", "side", "ts_signal", "ts_arrival",
+	    "alpha_decay",              # Original (now fixed)
+	    "alpha_decay_vol_adj",      # Volatility-adjusted
+	    "alpha_decay_weighted",     # Signal-strength weighted
+	    "execution_slippage",       # Alternative measure
+	    "decay_flag",               # Original adaptive
+	    "decay_flag_5bp",          # Fixed 5bp threshold
+	    "decay_flag_10bp",         # Fixed 10bp threshold  
+	    "decay_flag_vol",          # Volatility-adjusted
+	    "horizon", "vwap_exec", "r_sig", "r_exec",
+	    "r_sig_raw", "r_exec_raw",  # Direction-neutral versions
+	    "alpha_preserved_bps", "capture_ratio",
+	    "alpha_preserved_w_bps", "capture_ratio_w",
 	]
 	labels = inputs.loc[:, final_cols].copy()
 
